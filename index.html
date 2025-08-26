@@ -55,23 +55,23 @@ const BRAND_SUGGESTIONS = [
   "Fantoche","Fulbito","Jorgito","Terrabusi triple","Bon o Bon","B&N Bagley"
 ];
 
-const SAMPLE_PARTICIPANTS: Array<Pick<Team, "marca">> = [
-  { marca: "Cachafaz" },
-  { marca: "Rasta" },
-  { marca: "Block" },
-  { marca: "Milka Mousse" },
-  { marca: "Oreo" },
-  { marca: "Tita" },
-  { marca: "Capitán del Espacio" },
-  { marca: "Vauquita" },
-  { marca: "Pepitos" },
-  { marca: "Aguila mini torta brownie" },
-  { marca: "Fantoche" },
-  { marca: "Fulbito" },
-  { marca: "Jorgito" },
-  { marca: "Terrabusi triple" },
-  { marca: "Bon o Bon" },
-  { marca: "B&N Bagley" },
+const SAMPLE_PARTICIPANTS: Array<Pick<Team, "marca" | "photo">> = [
+  { marca: "Cachafaz", photo: "https://elnenearg.vtexassets.com/arquivos/ids/162359/ALFAJOR-CACHAFAZ-NEGRO-X60GR-1-9173.jpg?v=637971142874470000" },
+  { marca: "Rasta", photo: "https://acdn-us.mitiendanube.com/stores/001/185/658/products/rastanegro-f0c2decae45778a8e617150148107173-640-0.jpg" },
+  { marca: "Block", photo: "https://arjosimarprod.vtexassets.com/arquivos/ids/156289/cofler-block-alfajor-1clasico-60gr-1-971.jpg?v=637387318529270000" },
+  { marca: "Milka Mousse", photo: "https://ferniplastar.vtexassets.com/arquivos/ids/6012351/Alfajor-Milka-Mousse-42G.jpg?v=638878641446600000" },
+  { marca: "Oreo", photo: "https://http2.mlstatic.com/D_NQ_NP_754491-MLU70696877825_072023-O.webp" },
+  { marca: "Tita", photo: "https://http2.mlstatic.com/D_NQ_NP_861007-MLA76473483009_052024-O.webp" },
+  { marca: "Capitán del Espacio", photo: "https://www.capitandelespaciomr.com.ar/Prueba/capitan/images/pic1.png" },
+  { marca: "Vauquita", photo: "https://http2.mlstatic.com/D_NQ_NP_968050-MLU79311813463_092024-O.webp" },
+  { marca: "Pepitos", photo: "https://http2.mlstatic.com/D_NQ_NP_998442-MLA43106367276_082020-O.webp" },
+  { marca: "Aguila mini torta brownie", photo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLF67wVpUtd243EJLUvutoHjemLH52vnvNgA&s" },
+  { marca: "Fantoche", photo: "https://www.fantoche.com.ar/assets/images/productos/triplenegro.png" },
+  { marca: "Fulbito", photo: "https://http2.mlstatic.com/D_NQ_NP_895461-MLA76008036712_052024-O.webp" },
+  { marca: "Jorgito", photo: "https://www.cucinare.tv/wp-content/uploads/2020/07/Jorgito.jpg" },
+  { marca: "Terrabusi triple", photo: "https://www.farmaciassanchezantoniolli.com.ar/13210-medium_default/terrabusi-alfajor-triple-cl%C3%A1sico-x-70g.jpg" },
+  { marca: "Bon o Bon", photo: "https://arcorencasa.com/wp-content/uploads/2024/10/20241008-4303.webp" },
+  { marca: "B&N Bagley", photo: "https://statics.dinoonline.com.ar/imagenes/full_600x600_ma/2182006_f.jpg" },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -209,8 +209,8 @@ export default function MundialAlfajoresApp() {
 
   const initial: Packed = {
     phase: "registro",
-    targetCount: 12,
-    participants: [],
+    targetCount: 16,
+    participants: SAMPLE_PARTICIPANTS.map(sp => ({ id: uid(), marca: sp.marca, photo: sp.photo, color: pickPastelColor() })),
     evaluators: [],
     groups: [],
     semis: [],
@@ -435,7 +435,7 @@ function Registro({
 
   const loadSamples = () => {
     if (participants.length > 0 && !confirm("Reemplazar participantes por el listado provisto?")) return;
-    const sample = SAMPLE_PARTICIPANTS.slice(0, targetCount).map(sp => ({ id: uid(), marca: sp.marca, color: pickPastelColor() }));
+    const sample = SAMPLE_PARTICIPANTS.slice(0, targetCount).map(sp => ({ id: uid(), marca: sp.marca, photo: sp.photo, color: pickPastelColor() }));
     setParticipants(sample);
   };
 
