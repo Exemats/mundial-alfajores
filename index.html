@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mundial de Alfajores – Fijo (sin servidor)</title>
+  <title>Mundial de Alfajores — Fijo (sin servidor)</title>
   <style>
     :root { --emerald:#10b981; --slate:#475569; --bg:#f1f5f9; }
     *{ box-sizing:border-box; }
@@ -51,7 +51,7 @@
       <div class="panel grid">
         <div class="row" style="justify-content:space-between;">
           <b>Alfajores participantes</b>
-          <span class="muted">Lista fija – no editable</span>
+          <span class="muted">Lista fija — no editable</span>
         </div>
         <div id="pList" class="grid-cards"></div>
 
@@ -249,7 +249,25 @@
             const inp = document.createElement('input');
             inp.type='number'; inp.min=1; inp.max=10; inp.step=0.1; inp.style.width='80px';
             const v = g.scores[tid]?.[ev.id]; inp.value = defined(v)? v : '';
-            inp.oninput = () => { const val = clampScore(inp.value); if(!g.scores[tid]) g.scores[tid]={}; g.scores[tid][ev.id]=val; save(); renderGroups(); };
+
+            // *** CAMBIO MINIMO: permitir escribir decimales sin perder el foco ***
+            // Guardamos el texto mientras se escribe, sin re-render.
+            inp.oninput = () => {
+              if(!defined(g.scores[tid])) g.scores[tid]={};
+              g.scores[tid][ev.id] = inp.value;
+            };
+            // Al terminar la edición (blur/change) normalizamos, guardamos y re-renderizamos.
+            const commit = () => {
+              const val = clampScore(inp.value);
+              if(!defined(g.scores[tid])) g.scores[tid]={};
+              g.scores[tid][ev.id] = val;
+              save();
+              renderGroups();
+            };
+            inp.onchange = commit;
+            inp.onblur = commit;
+            // *** FIN CAMBIO ***
+
             td.appendChild(inp); tr.appendChild(td);
           });
           const avgCell = document.createElement('td');
@@ -387,7 +405,7 @@
     }
 
     // =============== Utils ===============
-    function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+    function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#39;"}[c])); }
 
     // start
     init();
