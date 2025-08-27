@@ -1,1109 +1,476 @@
-import React, { useEffect, useMemo, useState } from "react";
-import QRCode from "react-qr-code";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mundial de Alfajores — Simple</title>
+  <style>
+    :root { --emerald:#10b981; --slate:#475569; --bg:#f8fafc; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial; background:#f1f5f9; color:#0f172a; }
+    header { position:sticky; top:0; background:rgba(255,255,255,.9); backdrop-filter:saturate(180%) blur(6px); border-bottom:1px solid #e2e8f0; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 20px; margin: 0; display:flex; gap:10px; align-items:center; }
+    .chip { display:inline-flex; align-items:center; gap:6px; border:1px solid #e2e8f0; padding:4px 8px; border-radius:999px; background:white; font-size:12px; color:#64748b }
+    .panel { background:white; border:1px solid #e2e8f0; border-radius:16px; padding:16px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .grid { display:grid; gap:12px; }
+    .grid-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .grid-3 { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .btn { border:1px solid #cbd5e1; background:white; padding:8px 12px; border-radius:12px; font-weight:600; cursor:pointer; }
+    .btn.primary { background:var(--emerald); color:white; border-color:#059669; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    input, select { width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:10px; }
+    table { width:100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding:8px 10px; border-bottom:1px solid #e2e8f0; text-align:center; }
+    th:first-child, td:first-child { text-align:left; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .pill { border-radius:999px; border:1px solid #e2e8f0; padding:4px 10px; font-size:12px; background:#fff; }
+    .muted { color:#64748b; font-size:12px; }
+    .tag { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+    .footer { display:flex; justify-content:space-between; align-items:center; margin-top:16px; }
+    .alert { color:#b91c1c; font-size:12px; }
+    .ok { color:#065f46; font-size:12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap row" style="justify-content:space-between;">
+      <h1>🥮 Mundial de Alfajores <span class="chip" id="phaseChip">Registro</span></h1>
+      <div class="muted">12/16 participantes · Grupos (promedio) · Semis · Final</div>
+    </div>
+  </header>
 
-// Mundial de Alfajores — React single-file
-// Ahora soporta 12 o 16 participantes (según elijás) y evaluadores variables.
-// Fase de grupos: cada evaluador califica (1–10) a cada alfajor de su grupo.
-// El promedio define la tabla y avanza el 1º de cada grupo a semifinales (4) y luego Final.
-// Persistencia en localStorage.
+  <main class="wrap" style="padding-bottom:60px;">
+    <!-- Registro -->
+    <section id="view-registro" class="grid" style="margin-top:12px;">
+      <div class="panel grid" style="gap:8px;">
+        <div class="row" style="justify-content:space-between;">
+          <div class="row">
+            <label class="muted">Cantidad de participantes</label>
+          </div>
+          <select id="targetCount">
+            <option value="12">12 (4 grupos de 3)</option>
+            <option value="16">16 (4 grupos de 4)</option>
+          </select>
+        </div>
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Tipos
-// ────────────────────────────────────────────────────────────────────────────────
+        <h3 style="margin:6px 0 0 0;">Participantes</h3>
+        <div class="grid grid-3">
+          <input id="pNombre" placeholder="Nombre del participante" />
+          <input id="pMarca" placeholder="Marca de alfajor" list="brands" />
+          <button class="btn" id="btnAddP">Agregar participante</button>
+        </div>
+        <datalist id="brands"></datalist>
+        <div id="brandWarn" class="alert" style="display:none;">Ya existe un participante con esa marca. Regla: 1 por marca.</div>
 
-type Phase = "registro" | "grupos" | "semis" | "final" | "campeon";
+        <div id="pList" class="grid" style="grid-template-columns: repeat(auto-fit,minmax(260px,1fr));"></div>
 
-type Team = {
-  id: string;
-  marca: string;  // Marca de alfajor (única)
-  photo?: string; // URL de imagen del alfajor (opcional)
-  color?: string;
-};
+        <h3 style="margin:10px 0 0 0;">Evaluadores/Jurado</h3>
+        <div class="grid grid-3">
+          <input id="eNombre" placeholder="Nombre del evaluador" />
+          <button class="btn" id="btnAddE">Agregar evaluador</button>
+          <span class="muted" id="evalCount"></span>
+        </div>
+        <div id="eList" class="row"></div>
 
-type Evaluator = {
-  id: string;
-  nombre: string;
-};
+        <div class="footer">
+          <span class="muted" id="pStatus"></span>
+          <div class="row">
+            <button class="btn" id="btnEjemplo">Autocompletar ejemplo</button>
+            <button class="btn primary" id="btnGoGroups" disabled>Ir a Fase de grupos</button>
+          </div>
+        </div>
+      </div>
 
-type GroupName = "A" | "B" | "C" | "D";
+      <div class="panel">
+        <b>Reglamento</b>
+        <ul>
+          <li>12 → 4 grupos de 3 | 16 → 4 grupos de 4.</li>
+          <li>Regla: <b>1 participante por marca</b>.</li>
+          <li>En grupos, cada evaluador puntúa de 1 a 10. Orden por <b>promedio</b>, tiebreak <i>mediana</i> y cantidad de <i>10s</i>.</li>
+          <li>Avanza el 1º de cada grupo a Semifinales. Luego Final.</li>
+        </ul>
+      </div>
+    </section>
 
-type Group = {
-  name: GroupName;
-  teamIds: string[]; // 3 (si 12) o 4 (si 16)
-  scores: Record<string, Record<string, number>>; // teamId -> evaluatorId -> score 1..10 (con decimales)
-};
+    <!-- Grupos -->
+    <section id="view-grupos" class="grid" style="display:none; margin-top:12px;"></section>
 
-// KO con calificaciones por evaluador (opcional). Si hay empate en promedio, se puede elegir manual.
- type KoMatch = {
-  id: string;
-  homeId: string;
-  awayId: string;
-  winnerId?: string; // elección manual (1 vs 1)
-};
-  winnerId?: string; // si empate en promedios y se resuelve manual
-};
+    <!-- Semis -->
+    <section id="view-semis" class="grid" style="display:none; margin-top:12px;"></section>
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Utilidades
-// ────────────────────────────────────────────────────────────────────────────────
+    <!-- Final -->
+    <section id="view-final" class="grid" style="display:none; margin-top:12px;"></section>
 
-const uid = () => Math.random().toString(36).slice(2, 10);
+    <!-- Campeón -->
+    <section id="view-campeon" class="grid" style="display:none; margin-top:12px;"></section>
 
-const BRAND_SUGGESTIONS = [
-  "Cachafaz","Rasta","Block","Milka Mousse","Oreo","Tita",
-  "Capitán del Espacio","Vauquita","Pepitos","Aguila mini torta brownie",
-  "Fantoche","Fulbito","Jorgito","Terrabusi triple","Bon o Bon","B&N Bagley"
-];
+    <div class="footer">
+      <span class="muted">Guardado en este navegador (localStorage).</span>
+      <button class="btn" id="btnReset">Reiniciar torneo</button>
+    </div>
+  </main>
 
-const SAMPLE_PARTICIPANTS: Array<Pick<Team, "marca" | "photo">> = [
-  { marca: "Cachafaz", photo: "https://elnenearg.vtexassets.com/arquivos/ids/162359/ALFAJOR-CACHAFAZ-NEGRO-X60GR-1-9173.jpg?v=637971142874470000" },
-  { marca: "Rasta", photo: "https://acdn-us.mitiendanube.com/stores/001/185/658/products/rastanegro-f0c2decae45778a8e617150148107173-640-0.jpg" },
-  { marca: "Block", photo: "https://arjosimarprod.vtexassets.com/arquivos/ids/156289/cofler-block-alfajor-1clasico-60gr-1-971.jpg?v=637387318529270000" },
-  { marca: "Milka Mousse", photo: "https://ferniplastar.vtexassets.com/arquivos/ids/6012351/Alfajor-Milka-Mousse-42G.jpg?v=638878641446600000" },
-  { marca: "Oreo", photo: "https://http2.mlstatic.com/D_NQ_NP_754491-MLU70696877825_072023-O.webp" },
-  { marca: "Tita", photo: "https://http2.mlstatic.com/D_NQ_NP_861007-MLA76473483009_052024-O.webp" },
-  { marca: "Capitán del Espacio", photo: "https://www.capitandelespaciomr.com.ar/Prueba/capitan/images/pic1.png" },
-  { marca: "Vauquita", photo: "https://http2.mlstatic.com/D_NQ_NP_968050-MLU79311813463_092024-O.webp" },
-  { marca: "Pepitos", photo: "https://http2.mlstatic.com/D_NQ_NP_998442-MLA43106367276_082020-O.webp" },
-  { marca: "Aguila mini torta brownie", photo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLF67wVpUtd243EJLUvutoHjemLH52vnvNgA&s" },
-  { marca: "Fantoche", photo: "https://www.fantoche.com.ar/assets/images/productos/triplenegro.png" },
-  { marca: "Fulbito", photo: "https://http2.mlstatic.com/D_NQ_NP_895461-MLA76008036712_052024-O.webp" },
-  { marca: "Jorgito", photo: "https://www.cucinare.tv/wp-content/uploads/2020/07/Jorgito.jpg" },
-  { marca: "Terrabusi triple", photo: "https://www.farmaciassanchezantoniolli.com.ar/13210-medium_default/terrabusi-alfajor-triple-cl%C3%A1sico-x-70g.jpg" },
-  { marca: "Bon o Bon", photo: "https://arcorencasa.com/wp-content/uploads/2024/10/20241008-4303.webp" },
-  { marca: "B&N Bagley", photo: "https://statics.dinoonline.com.ar/imagenes/full_600x600_ma/2182006_f.jpg" },
-];
+  <script>
+    // ==========================
+    // Datos y estado (localStorage)
+    // ==========================
+    const BRAND_SUGGESTIONS = [
+      "Havanna","Cachafaz","Guaymallén","Jorgito","Capitán del Espacio","Milka",
+      "Bon o Bon","El Turco","Estancia El Rosario","Suchard","Tatin","Block",
+      "Terrabusi","Bagley","Fantoche","La Nirva"
+    ];
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Persistencia
-// ────────────────────────────────────────────────────────────────────────────────
+    const KEY = 'mundial_alfajores_simple_v1';
+    const initial = {
+      phase: 'registro',
+      targetCount: 12,
+      participants: [], // {id,nombre,marca,color}
+      evaluators: [],   // {id,nombre}
+      groups: [],       // [{name:'A', teamIds:[..], scores:{ teamId: { evaluatorId: number } }}]
+      semis: [],        // [{id, homeId, awayId, ratings:{home:{},away:{}}, winnerId?}]
+      finalMatch: null, // {..}
+      championId: null,
+    };
 
-function useLocalStorage<T>(key: string, initial: T) {
-  const [state, setState] = useState<T>(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? (JSON.parse(raw) as T) : initial;
-    } catch { return initial; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
-  }, [key, state]);
-  return [state, setState] as const;
-}
+    let state = load() || initial;
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Backend (opcional) — Firestore en tiempo real
-// ────────────────────────────────────────────────────────────────────────────────
+    function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+    function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
+    function uid(){ return Math.random().toString(36).slice(2,10); }
+    function pastel(){ const h=[140,160,180,200,220,260,300,20,40][Math.floor(Math.random()*9)]; const s=65, l=78; return `hsl(${h} ${s}% ${l}%)`; }
 
-// ⚠️ Para colaboración en vivo, completá tu config de Firebase aquí.
-//    Si lo dejás vacío, la app funciona solo en este navegador (localStorage).
-const FIREBASE_CONFIG: any = {
-  // apiKey: "...",
-  // authDomain: "...",
-  // projectId: "...",
-};
+    // ==========================
+    // Helpers numéricos
+    // ==========================
+    const defined = x => x!==undefined && x!==null;
+    const clampScore = v => !defined(v) ? undefined : Math.max(1, Math.min(10, Math.floor(Number(v))));
+    const avg = arr => !arr.length ? NaN : arr.reduce((a,b)=>a+b,0)/arr.length;
+    const median = arr => { if(!arr.length) return NaN; const a=[...arr].sort((x,y)=>x-y); const m=Math.floor(a.length/2); return a.length%2?a[m]:(a[m-1]+a[m])/2; }
+    const countTens = arr => arr.filter(v=>v===10).length;
+    const fmt = x => Number.isFinite(x) ? x.toFixed(2) : '—';
 
-let firebaseApp: any = null;
-let firestore: any = null;
+    // ==========================
+    // DOM refs
+    // ==========================
+    const phaseChip = document.getElementById('phaseChip');
+    const brandsList = document.getElementById('brands');
 
-async function ensureFirebase() {
-  if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.projectId) return null;
-  if (firebaseApp && firestore) return { firebaseApp, firestore };
-  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-  const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-  firebaseApp = initializeApp(FIREBASE_CONFIG);
-  firestore = getFirestore(firebaseApp);
-  return { firebaseApp, firestore };
-}
+    const targetCountSel = document.getElementById('targetCount');
+    const pNombre = document.getElementById('pNombre');
+    const pMarca = document.getElementById('pMarca');
+    const btnAddP = document.getElementById('btnAddP');
+    const brandWarn = document.getElementById('brandWarn');
+    const pList = document.getElementById('pList');
 
-// Helpers Firestore
-async function getDocRef(tournamentId: string) {
-  const fb = await ensureFirebase();
-  if (!fb) return null;
-  const { doc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-  return doc(firestore, "tournaments", tournamentId);
-}
+    const eNombre = document.getElementById('eNombre');
+    const btnAddE = document.getElementById('btnAddE');
+    const eList = document.getElementById('eList');
+    const evalCount = document.getElementById('evalCount');
 
-function nowIso() { return new Date().toISOString(); }
+    const btnEjemplo = document.getElementById('btnEjemplo');
+    const btnGoGroups = document.getElementById('btnGoGroups');
+    const pStatus = document.getElementById('pStatus');
 
-// Estado colaborativo
-function useCloudState<T>(tournamentId: string | null, localKey: string, initial: T) {
-  const [state, setState] = useLocalStorage<T>(localKey, initial);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [enabled, setEnabled] = useState<boolean>(false);
+    const viewRegistro = document.getElementById('view-registro');
+    const viewGrupos = document.getElementById('view-grupos');
+    const viewSemis = document.getElementById('view-semis');
+    const viewFinal = document.getElementById('view-final');
+    const viewCampeon = document.getElementById('view-campeon');
 
-  useEffect(() => { (async () => { setEnabled(Boolean((await ensureFirebase()))); })(); }, []);
+    const btnReset = document.getElementById('btnReset');
 
-  // Suscribirse al doc
-  useEffect(() => {
-    let unsub: any = null;
-    (async () => {
-      if (!tournamentId || !enabled) return;
-      setLoading(true);
-      const fb = await ensureFirebase();
-      if (!fb) { setLoading(false); return; }
-      const { onSnapshot, getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-      const ref = await getDocRef(tournamentId);
-      if (!ref) { setLoading(false); return; }
+    // ==========================
+    // Init UI
+    // ==========================
+    function init(){
+      // datalist marcas
+      brandsList.innerHTML = BRAND_SUGGESTIONS.map(b=>`<option value="${b}"></option>`).join('');
 
-      // Crear doc si no existe
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        await setDoc(ref, { value: state, updatedAt: nowIso(), version: 1 });
+      targetCountSel.value = String(state.targetCount);
+      targetCountSel.onchange = () => { state.targetCount = Number(targetCountSel.value); save(); render(); };
+
+      btnAddP.onclick = () => {
+        const nombre = pNombre.value.trim();
+        const marca = pMarca.value.trim();
+        const brandTaken = !!state.participants.find(p => p.marca.toLowerCase() === marca.toLowerCase());
+        brandWarn.style.display = brandTaken ? 'block' : 'none';
+        if (!nombre || !marca || brandTaken || state.participants.length >= state.targetCount) return;
+        state.participants.push({ id: uid(), nombre, marca, color: pastel() });
+        pNombre.value = ''; pMarca.value = ''; save(); render();
+      };
+
+      btnAddE.onclick = () => {
+        const nombre = eNombre.value.trim(); if (!nombre) return;
+        state.evaluators.push({ id: uid(), nombre }); eNombre.value = ''; save(); render();
+      };
+
+      btnEjemplo.onclick = () => {
+        const brands = [...BRAND_SUGGESTIONS];
+        state.participants = Array.from({length: state.targetCount}).map((_,i)=>({
+          id: uid(), nombre: `Participante ${i+1}`, marca: brands[i] || `Marca ${i+1}`, color: pastel()
+        }));
+        save(); render();
+      };
+
+      btnGoGroups.onclick = () => { if(!btnGoGroups.disabled) { makeGroups(); state.phase='grupos'; save(); render(); } };
+
+      btnReset.onclick = () => { if(confirm('¿Reiniciar todo?')) { state = JSON.parse(JSON.stringify(initial)); save(); render(); } };
+
+      render();
+    }
+
+    function render(){
+      phaseChip.textContent = state.phase.charAt(0).toUpperCase()+state.phase.slice(1);
+
+      const brandsUnique = new Set(state.participants.map(p=>p.marca.toLowerCase())).size === state.participants.length;
+      pStatus.textContent = `${state.participants.length}/${state.targetCount} participantes · Evaluadores: ${state.evaluators.length}`;
+      btnGoGroups.disabled = !(state.participants.length === state.targetCount && state.evaluators.length>0 && brandsUnique);
+
+      // listas
+      pList.innerHTML = state.participants.map((p,i)=>`
+        <div class="row" style="justify-content:space-between; border:1px solid #e2e8f0; border-radius:12px; padding:8px 10px; background:#fff;">
+          <div class="row" style="min-width:0;">
+            <span class="tag" style="background:${p.color}"></span>
+            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <b>${i+1}. ${p.nombre}</b> <span class="muted">(${p.marca})</span>
+            </div>
+          </div>
+          <button class="btn" onclick="removeP('${p.id}')">Quitar</button>
+        </div>
+      `).join('');
+
+      evalCount.textContent = `${state.evaluators.length} cargados`;
+      eList.innerHTML = state.evaluators.map(e=>`<span class="pill">${e.nombre} <a href="#" onclick="removeE('${e.id}')" style="margin-left:8px; color:#64748b;">×</a></span>`).join(' ');
+
+      // views
+      show(viewRegistro, state.phase==='registro');
+      show(viewGrupos, state.phase==='grupos');
+      show(viewSemis, state.phase==='semis');
+      show(viewFinal, state.phase==='final');
+      show(viewCampeon, state.phase==='campeon');
+
+      if (state.phase==='grupos') renderGroups();
+      if (state.phase==='semis') renderSemis();
+      if (state.phase==='final') renderFinal();
+      if (state.phase==='campeon') renderChampion();
+    }
+
+    function show(el, on){ el.style.display = on ? 'grid' : 'none'; }
+
+    window.removeP = (id) => { state.participants = state.participants.filter(p=>p.id!==id); save(); render(); }
+    window.removeE = (id) => { state.evaluators = state.evaluators.filter(e=>e.id!==id); save(); render(); }
+
+    // ==========================
+    // Fase de grupos
+    // ==========================
+    function makeGroups(){
+      const size = state.targetCount===12?3:4;
+      const shuffled = [...state.participants].sort(()=>Math.random()-0.5);
+      const chunks = [shuffled.slice(0,size), shuffled.slice(size,size*2), shuffled.slice(size*2,size*3), shuffled.slice(size*3,size*4)];
+      const names = ['A','B','C','D'];
+      state.groups = chunks.map((chunk,i)=>({ name:names[i], teamIds: chunk.map(t=>t.id), scores: Object.fromEntries(chunk.map(t=>[t.id,{}])) }));
+    }
+
+    function computeGroupTable(g){
+      const rows = g.teamIds.map(id=>{
+        const vals = Object.values(g.scores[id]||{}).filter(v=>defined(v));
+        return { id, avg: avg(vals), median: median(vals), count: vals.length, tens: countTens(vals) };
+      });
+      rows.sort((a,b)=> (b.avg-a.avg) || (b.median-a.median) || (b.tens-a.tens) );
+      return rows;
+    }
+
+    function teamById(id){ return state.participants.find(p=>p.id===id); }
+
+    function renderGroups(){
+      viewGrupos.innerHTML = '';
+      const ready = state.groups.length===4;
+      if (!ready){ viewGrupos.innerHTML = '<div class="panel">Generá los grupos desde Registro.</div>'; return; }
+
+      const grid = document.createElement('div'); grid.className='grid grid-2';
+      state.groups.forEach(g=>{
+        const card = document.createElement('div'); card.className='panel grid';
+        card.innerHTML = `<div class="row" style="justify-content:space-between;">\
+          <b>Grupo ${g.name}</b>\
+          <span class="muted">${g.teamIds.length} alfajores · ${state.evaluators.length} evaluadores</span>\
+        </div>`;
+
+        // tabla de inputs
+        const tbl = document.createElement('table');
+        const thead = document.createElement('thead');
+        thead.innerHTML = `<tr><th>Alfajor</th>${state.evaluators.map(e=>`<th>${esc(e.nombre)}</th>`).join('')}<th>Prom.</th><th>Mediana</th></tr>`;
+        tbl.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        g.teamIds.forEach(tid=>{
+          const tr = document.createElement('tr');
+          const team = teamById(tid);
+          tr.innerHTML = `<td><span class="tag" style="background:${team.color}"></span> <b>${esc(team.nombre)}</b> <span class="muted">(${esc(team.marca)})</span></td>`;
+          state.evaluators.forEach(ev=>{
+            const td = document.createElement('td');
+            const inp = document.createElement('input');
+            inp.type='number'; inp.min=1; inp.max=10; inp.step=1; inp.style.width='70px';
+            const v = g.scores[tid]?.[ev.id]; inp.value = defined(v)? v : '';
+            inp.oninput = () => { const val = clampScore(inp.value); if(!defined(g.scores[tid])) g.scores[tid]={}; g.scores[tid][ev.id]=val; save(); renderGroups(); };
+            td.appendChild(inp); tr.appendChild(td);
+          });
+          const avgCell = document.createElement('td');
+          const medCell = document.createElement('td');
+          const vals = Object.values(g.scores[tid]||{}).filter(v=>defined(v));
+          avgCell.textContent = fmt(avg(vals)); medCell.textContent = fmt(median(vals));
+          tr.appendChild(avgCell); tr.appendChild(medCell);
+          tbody.appendChild(tr);
+        });
+        tbl.appendChild(tbody);
+        card.appendChild(tbl);
+
+        // tabla de posiciones
+        const rows = computeGroupTable(g);
+        const table2 = document.createElement('table');
+        table2.innerHTML = `<thead><tr><th>Equipo</th><th>Prom.</th><th>Mediana</th><th>#Votos</th><th>#10s</th></tr></thead>`;
+        const tb2 = document.createElement('tbody');
+        rows.forEach(r=>{
+          const t = teamById(r.id);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td><span class="tag" style="background:${t.color}"></span> ${esc(t.nombre)} <span class="muted">(${esc(t.marca)})</span></td><td><b>${fmt(r.avg)}</b></td><td>${fmt(r.median)}</td><td>${r.count}</td><td>${r.tens}</td>`;
+          tb2.appendChild(tr);
+        });
+        table2.appendChild(tb2);
+        const winner = rows[0] ? teamById(rows[0].id) : null;
+        const winDiv = document.createElement('div'); winDiv.className='muted'; winDiv.style.marginTop='6px';
+        winDiv.innerHTML = `Avanza: <b>${winner? esc(winner.nombre): '—'}</b>`;
+
+        card.appendChild(document.createElement('hr'));
+        card.appendChild(table2);
+        card.appendChild(winDiv);
+        grid.appendChild(card);
+      });
+
+      viewGrupos.appendChild(grid);
+
+      // botón avanzar
+      const allHaveAny = state.groups.every(g=> g.teamIds.every(id=> Object.values(g.scores[id]||{}).some(v=>defined(v)) ));
+      const footer = document.createElement('div'); footer.className='row'; footer.style.justifyContent='flex-end';
+      const next = document.createElement('button'); next.className='btn primary'; next.textContent='Avanzar a Semifinales'; next.disabled = !allHaveAny;
+      next.onclick = () => { if(!next.disabled){ makeSemis(); state.phase='semis'; save(); render(); } };
+      footer.appendChild(next); viewGrupos.appendChild(footer);
+    }
+
+    // ==========================
+    // Semifinales / Final (ratings por evaluador)
+    // ==========================
+    function pickGroupWinner(g){ return computeGroupTable(g)[0]?.id; }
+
+    function makeSemis(){
+      const map = Object.fromEntries(state.groups.map(g=>[g.name,g]));
+      const A = pickGroupWinner(map['A']);
+      const B = pickGroupWinner(map['B']);
+      const C = pickGroupWinner(map['C']);
+      const D = pickGroupWinner(map['D']);
+      state.semis = [ { id: uid(), homeId:A, awayId:D, ratings:{home:{},away:{}} }, { id: uid(), homeId:B, awayId:C, ratings:{home:{},away:{}} } ];
+    }
+
+    function renderSemis(){
+      viewSemis.innerHTML = '';
+      const grid = document.createElement('div'); grid.className='grid grid-2';
+      state.semis.forEach((m,i)=>{
+        const card = document.createElement('div'); card.className='panel';
+        const h = teamById(m.homeId), a = teamById(m.awayId);
+        card.innerHTML = `<div class="muted" style="margin-bottom:6px;">Semifinal ${i+1}</div>`;
+        card.appendChild(koRatingsTable(m));
+        grid.appendChild(card);
+      });
+      viewSemis.appendChild(grid);
+
+      const ready = state.semis.every(isKoResolved);
+      const footer = document.createElement('div'); footer.className='row'; footer.style.justifyContent='flex-end';
+      const next = document.createElement('button'); next.className='btn primary'; next.textContent='Armar Final'; next.disabled = !ready;
+      next.onclick = () => { if(!next.disabled){ const w = state.semis.map(pickKoWinner); state.finalMatch = { id: uid(), homeId:w[0], awayId:w[1], ratings:{home:{},away:{}} }; state.phase='final'; save(); render(); } };
+      footer.appendChild(next); viewSemis.appendChild(footer);
+    }
+
+    function koRatingsTable(match){
+      const wrap = document.createElement('div');
+      const h = teamById(match.homeId), a = teamById(match.awayId);
+      const tbl = document.createElement('table');
+      const thead = document.createElement('thead');
+      thead.innerHTML = `<tr><th>Evaluador</th><th>${esc(h.nombre)} (${esc(h.marca)})</th><th>${esc(a.nombre)} (${esc(a.marca)})</th></tr>`; tbl.appendChild(thead);
+      const tb = document.createElement('tbody');
+      state.evaluators.forEach(ev=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${esc(ev.nombre)}</td>`;
+        const ih = document.createElement('input'); ih.type='number'; ih.min=1; ih.max=10; ih.step=1; ih.style.width='70px'; ih.value = defined(match.ratings.home[ev.id])? match.ratings.home[ev.id]: '';
+        ih.oninput = ()=>{ match.ratings.home[ev.id] = clampScore(ih.value); save(); renderSemis(); };
+        const ia = document.createElement('input'); ia.type='number'; ia.min=1; ia.max=10; ia.step=1; ia.style.width='70px'; ia.value = defined(match.ratings.away[ev.id])? match.ratings.away[ev.id]: '';
+        ia.oninput = ()=>{ match.ratings.away[ev.id] = clampScore(ia.value); save(); renderSemis(); };
+        const tdh=document.createElement('td'); tdh.appendChild(ih); const tda=document.createElement('td'); tda.appendChild(ia);
+        tr.appendChild(tdh); tr.appendChild(tda); tb.appendChild(tr);
+      });
+      tbl.appendChild(tb);
+
+      const ah = avg(Object.values(match.ratings.home).filter(v=>defined(v)));
+      const aw = avg(Object.values(match.ratings.away).filter(v=>defined(v)));
+      const tied = Number.isFinite(ah) && Number.isFinite(aw) && Math.abs(ah-aw)<1e-9;
+
+      const info = document.createElement('div'); info.className='muted'; info.style.marginTop='6px';
+      info.innerHTML = `Promedios → ${esc(h.nombre)}: <b>${fmt(ah)}</b> · ${esc(a.nombre)}: <b>${fmt(aw)}</b>`;
+
+      wrap.appendChild(tbl); wrap.appendChild(info);
+
+      if (tied){
+        const box = document.createElement('div'); box.className='panel'; box.style.marginTop='8px';
+        box.innerHTML = `<div class='row' style='justify-content:space-between;'>Empate en promedio. Elegí ganador manual.</div>`;
+        const row = document.createElement('div'); row.className='row'; row.style.marginTop='6px';
+        const b1 = document.createElement('button'); b1.className='btn'; b1.textContent = 'Gana '+h.nombre; b1.onclick=()=>{ match.winnerId = h.id; save(); renderSemis(); };
+        const b2 = document.createElement('button'); b2.className='btn'; b2.textContent = 'Gana '+a.nombre; b2.onclick=()=>{ match.winnerId = a.id; save(); renderSemis(); };
+        row.appendChild(b1); row.appendChild(b2); box.appendChild(row); wrap.appendChild(box);
       }
 
-      unsub = onSnapshot(ref, (docSnap: any) => {
-        const data = docSnap.data();
-        if (!data) return;
-        // Mezcla por timestamp: si remoto es más nuevo, reemplaza
-        const local = (state as any);
-        const lts = (local && (local as any).__updatedAt) || "";
-        const rts = data.updatedAt || "";
-        if (rts > lts) {
-          const next = { ...(data.value || initial) };
-          (next as any).__updatedAt = rts;
-          setState(next);
-        }
-        setLoading(false);
-      });
-    })();
-    return () => { if (unsub) unsub(); };
-  }, [tournamentId, enabled]);
-
-  // Guardar al cambiar
-  useEffect(() => {
-    if (!tournamentId || !(state as any)) return;
-    (async () => {
-      const ref = await getDocRef(tournamentId);
-      if (!ref) return;
-      const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-      const payload: any = { value: state, updatedAt: nowIso(), version: 1 };
-      (payload.value as any).__updatedAt = payload.updatedAt;
-      try { await setDoc(ref, payload, { merge: true }); } catch {}
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId, JSON.stringify(state)]);
-
-  return { state, setState, loading, cloudEnabled: enabled } as const;
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-// App
-// ────────────────────────────────────────────────────────────────────────────────
-
-const FIXED_LIST = true; // sin servidor, lista fija provista por el usuario
-
-export default function MundialAlfajoresApp() {
-  const [phaseLocal, setPhaseLocal] = useLocalStorage<Phase>("phase", "registro");
-  const [tournamentId, setTournamentId] = useState<string | null>(getTournamentIdFromUrl());
-
-  function exportCSV(){
-    const lines: string[] = [];
-    const quote = (s: any) => '"' + String(s).replace(/"/g,'""') + '"';
-    lines.push('Seccion,Grupo,Marca,Promedio,Mediana,Votos,Dieces');
-    (state.groups||[]).forEach(g => {
-      const rows = computeGroupTable(g, state.participants, state.evaluators);
-      rows.forEach(r => {
-        lines.push(['Grupos', g.name, r.team.marca, fmtAvg(r.avg), fmtAvg(r.median), r.count, r.tens].map(quote).join(','));
-      });
-    });
-    if (state.semis?.length){
-      state.semis.forEach((m,i)=>{
-        lines.push(['Semifinal', i+1, teamByIdLocal(m.winnerId||'')?.marca||'' , '', '', '', ''].map(quote).join(','));
-      });
+      return wrap;
     }
-    if (state.finalMatch){
-      lines.push(['Final', '', teamByIdLocal(state.finalMatch.winnerId||'')?.marca||'', '', '', '', ''].map(quote).join(','));
+
+    function isKoResolved(m){
+      const ah = avg(Object.values(m.ratings.home).filter(v=>defined(v)));
+      const aw = avg(Object.values(m.ratings.away).filter(v=>defined(v)));
+      if (!Number.isFinite(ah) || !Number.isFinite(aw)) return false;
+      if (Math.abs(ah-aw) > 1e-9) return true; return !!m.winnerId;
     }
-    if (state.championId){
-      lines.push(['Campeon', '', teamByIdLocal(state.championId)?.marca||'', '', '', '', ''].map(quote).join(','));
+    function pickKoWinner(m){
+      const ah = avg(Object.values(m.ratings.home).filter(v=>defined(v)));
+      const aw = avg(Object.values(m.ratings.away).filter(v=>defined(v)));
+      if (!Number.isFinite(ah) || !Number.isFinite(aw)) return null;
+      if (ah>aw) return m.homeId; if (aw>ah) return m.awayId; return m.winnerId || null;
     }
-    const blob = new Blob([lines.join('
-')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'mundial-alfajores.csv'; a.click(); URL.revokeObjectURL(url);
-  }
-  function teamByIdLocal(id?: string){ return (state.participants||[]).find(p=>p.id===id); }
-  const [phaseLocal, setPhaseLocal] = useLocalStorage<Phase>("phase", "registro");
-  const [tournamentId, setTournamentId] = useState<string | null>(getTournamentIdFromUrl());
 
-  // Estado empaquetado para sync
-  type Packed = {
-    phase: Phase;
-    targetCount: number;
-    participants: Team[];
-    evaluators: Evaluator[];
-    groups: Group[];
-    semis: KoMatch[];
-    finalMatch: KoMatch | null;
-    championId?: string;
-  };
-
-  const initial: Packed = {
-    phase: "registro",
-    targetCount: 16,
-    participants: SAMPLE_PARTICIPANTS.map(sp => ({ id: uid(), marca: sp.marca, photo: sp.photo, color: pickPastelColor() })),
-    evaluators: [],
-    groups: [],
-    semis: [],
-    finalMatch: null,
-    championId: undefined,
-  };
-
-  const { state, setState, loading, cloudEnabled } = useCloudState<Packed>(tournamentId, "mundial-alfajores-packed", initial);
-
-  // Setters helpers
-  const setPhase = (p: Phase) => setState({ ...state, phase: p });
-  const setTargetCount = (n: number) => setState({ ...state, targetCount: n });
-  const setParticipants = (v: Team[]) => setState({ ...state, participants: v });
-  const setEvaluators = (v: Evaluator[]) => setState({ ...state, evaluators: v });
-  const setGroups = (v: Group[]) => setState({ ...state, groups: v });
-  const setSemis = (v: KoMatch[]) => setState({ ...state, semis: v });
-  const setFinalMatch = (v: KoMatch | null) => setState({ ...state, finalMatch: v });
-  const setChampionId = (v?: string) => setState({ ...state, championId: v });
-
-  const [showShare, setShowShare] = useState(false);
-
-  // Reset
-  const resetAll = () => {
-    if (!confirm("¿Reiniciar todo el torneo?")) return;
-    setState(initial);
-  };
-
-  // Lobby (crear / unirse)
-  if (!tournamentId) {
-    return (
-      <Lobby
-        onCreate={async () => {
-          const id = makeRoomId();
-          setTournamentId(id);
-          setUrlTournament(id);
-        }}
-        onJoin={(id) => {
-          setTournamentId(id);
-          setUrlTournament(id);
-        }}
-        cloudEnabled={cloudEnabled}
-      />
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <Header targetCount={targetCount} />
-      <div className="mx-auto max-w-6xl px-4 pb-24">
-        <Stepper phase={phase} />
-
-        {phase === "registro" && (
-          <Registro
-            participants={participants}
-            setParticipants={setParticipants}
-            evaluators={evaluators}
-            setEvaluators={setEvaluators}
-            targetCount={targetCount}
-            setTargetCount={setTargetCount}
-            onReady={() => setPhase("grupos")}
-          />
-        )}
-
-        {phase === "grupos" && (
-          <FaseDeGrupos
-            targetCount={targetCount}
-            participants={participants}
-            evaluators={evaluators}
-            groups={groups}
-            setGroups={setGroups}
-            onReady={(semiMatches) => { setSemis(semiMatches); setPhase("semis"); }}
-          />
-        )}
-
-        {phase === "semis" && (
-          <Semifinales
-            participants={participants}
-            evaluators={evaluators}
-            semis={semis}
-            setSemis={setSemis}
-            onReady={(finalM) => { setFinalMatch(finalM); setPhase("final"); }}
-          />
-        )}
-
-        {phase === "final" && finalMatch && (
-          <Final
-            participants={participants}
-            evaluators={evaluators}
-            match={finalMatch}
-            setMatch={setFinalMatch}
-            onChampion={(id) => { setChampionId(id); setPhase("campeon"); }}
-          />
-        )}
-
-        {phase === "campeon" && championId && (
-          <Campeon champion={participants.find((t) => t.id === championId)!} onReset={resetAll} />
-        )}
-
-        <div className="mt-12 flex items-center justify-between">
-          <div className="text-xs text-slate-500">
-            Guardado automáticamente en este navegador.
-            {tournamentId && (
-              <span className="ml-2 text-emerald-700">· Modo sin servidor (lista fija)</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {tournamentId && (
-              <button onClick={() => setShowShare(true)} className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-white">Compartir sala / QR</button>
-            )}
-            <button onClick={exportCSV} className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-white">Exportar CSV</button>
-            <button onClick={resetAll} className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-white">Reiniciar torneo</button>
-          </div>
-        </div>
-          <div className="flex items-center gap-2">
-            {tournamentId && (
-              <button onClick={() => setShowShare(true)} className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-white">Compartir sala / QR</button>
-            )}
-            <button onClick={resetAll} className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-white">Reiniciar torneo</button>
-          </div>
-        </div>
-
-        {showShare && tournamentId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-base font-semibold">Compartir sala</h3>
-                <button onClick={() => setShowShare(false)} className="text-slate-500 hover:underline">cerrar</button>
-              </div>
-              <p className="mb-3 text-sm text-slate-600">Escaneá este QR para entrar directo a la misma sala desde cualquier dispositivo:</p>
-              <div className="flex justify-center p-4">
-                <div className="rounded-xl border p-3 bg-white">
-                  <QRCode value={`${window.location.origin}${window.location.pathname}?t=${tournamentId}`} size={192} />
-                </div>
-              </div>
-              <div className="mt-4 grid gap-2">
-                <input readOnly value={`${window.location.origin}${window.location.pathname}?t=${tournamentId}`} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?t=${tournamentId}`)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Copiar link</button>
-              </div>
-            </div>
-          </div>
-        )}
-          <button onClick={resetAll} className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-white">Reiniciar torneo</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Header / Stepper
-// ────────────────────────────────────────────────────────────────────────────────
-
-function Header({ targetCount }: { targetCount: number }) {
-  return (
-    <header className="relative mb-8 w-full border-b bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-white shadow">🥮</span>
-          <h1 className="text-xl font-bold tracking-tight">Mundial de Alfajores</h1>
-        </div>
-        <div className="hidden text-sm text-slate-500 md:block">
-          {targetCount} participantes · 4 grupos (promedios con decimales) · Semis/Final por elección directa
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function Stepper({ phase }: { phase: Phase }) {
-  const steps: { key: Phase; label: string }[] = [
-    { key: "registro", label: "Participantes & Jurado" },
-    { key: "grupos", label: "Fase de grupos (promedio)" },
-    { key: "semis", label: "Semifinales" },
-    { key: "final", label: "Final" },
-    { key: "campeon", label: "Campeón" },
-  ];
-  const idx = steps.findIndex((s) => s.key === phase);
-  return (
-    <ol className="mb-8 grid grid-cols-5 gap-2">
-      {steps.map((s, i) => (
-        <li key={s.key} className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm ${i < idx ? "border-emerald-300 bg-emerald-50 text-emerald-800" : i === idx ? "border-emerald-500 bg-white text-emerald-700" : "border-slate-200 bg-white text-slate-500"}`}>
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs">{i + 1}</span>
-          <span className="truncate">{s.label}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Registro de participantes y evaluadores
-// ────────────────────────────────────────────────────────────────────────────────
-
-function Registro({
-  participants, setParticipants,
-  evaluators, setEvaluators,
-  targetCount, setTargetCount,
-  onReady,
-}: {
-  participants: Team[];
-  setParticipants: (t: Team[]) => void;
-  evaluators: Evaluator[];
-  setEvaluators: (e: Evaluator[]) => void;
-  targetCount: number;
-  setTargetCount: (n: number) => void;
-  onReady: () => void;
-}) {
-  const [marca, setMarca] = useState("");
-  const [foto, setFoto] = useState("");
-  const [nombreEval, setNombreEval] = useState("");
-
-  const brandTaken = marca.trim() && participants.some(p => p.marca.trim().toLowerCase() === marca.trim().toLowerCase());
-  const canAddTeam = marca.trim() && !brandTaken && participants.length < targetCount;
-  const canAddEval = nombreEval.trim().length > 0;
-
-  const addTeam = () => {
-    if (!canAddTeam) return;
-    const t: Team = { id: uid(), marca: marca.trim(), photo: foto.trim() || undefined, color: pickPastelColor() };
-    setParticipants([...participants, t]);
-    setMarca(""); setFoto("");
-  };
-  const removeTeam = (id: string) => setParticipants(participants.filter(p => p.id !== id));
-
-  const addEval = () => {
-    if (!canAddEval) return;
-    const e: Evaluator = { id: uid(), nombre: nombreEval.trim() };
-    setEvaluators([...evaluators, e]);
-    setNombreEval("");
-  };
-  const removeEval = (id: string) => setEvaluators(evaluators.filter(e => e.id !== id));
-
-  const loadSamples = () => {
-    if (participants.length > 0 && !confirm("Reemplazar participantes por el listado provisto?")) return;
-    const sample = SAMPLE_PARTICIPANTS.slice(0, targetCount).map(sp => ({ id: uid(), marca: sp.marca, photo: sp.photo, color: pickPastelColor() }));
-    setParticipants(sample);
-  };
-
-  const ready = participants.length === targetCount && evaluators.length > 0 && !brandTaken && (new Set(participants.map(p=>p.marca.toLowerCase())).size === participants.length);
-
-  return (
-  const [nombre, setNombre] = useState("");
-  const [marca, setMarca] = useState("");
-  const [nombreEval, setNombreEval] = useState("");
-
-  const canAddTeam = nombre.trim() && marca.trim() && participants.length < targetCount;
-  const canAddEval = nombreEval.trim().length > 0;
-
-  const addTeam = () => {
-    if (!canAddTeam) return;
-    const t: Team = { id: uid(), nombre: nombre.trim(), marca: marca.trim(), color: pickPastelColor() };
-    setParticipants([...participants, t]);
-    setNombre(""); setMarca("");
-  };
-  const removeTeam = (id: string) => setParticipants(participants.filter(p => p.id !== id));
-
-  const addEval = () => {
-    if (!canAddEval) return;
-    const e: Evaluator = { id: uid(), nombre: nombreEval.trim() };
-    setEvaluators([...evaluators, e]);
-    setNombreEval("");
-  };
-  const removeEval = (id: string) => setEvaluators(evaluators.filter(e => e.id !== id));
-
-  const loadSamples = () => {
-    if (participants.length > 0 && !confirm("Reemplazar participantes por un ejemplo?")) return;
-    const sample = SAMPLE_PARTICIPANTS.slice(0, targetCount).map(sp => ({ id: uid(), nombre: sp.nombre, marca: sp.marca, color: pickPastelColor() }));
-    setParticipants(sample);
-  };
-
-  const ready = participants.length === targetCount && evaluators.length > 0;
-
-  return (
-    <section>
-      <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Cantidad de participantes</label>
-            <select value={targetCount} onChange={(e)=>setTargetCount(Number(e.target.value))} disabled={FIXED_LIST} className="w-full rounded-xl border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-400">
-              <option value={12}>12 (4 grupos de 3)</option>
-              <option value={16}>16 (4 grupos de 4)</option>
-            </select>
-            {FIXED_LIST && <div className="mt-1 text-xs text-slate-500">Lista fija (16) — edición deshabilitada.</div>}
-          </div>
-        </div>
-        </div>
-
-        <h2 className="mb-2 text-lg font-semibold">Alfajores ({participants.length}/{targetCount})</h2>
-        <p className="mb-3 text-sm text-slate-600">Ingresá la <b>marca</b> (única) y, si querés, una <b>foto</b> (URL). En grupos, los puntajes aceptan <b>decimales</b>.</p>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          {!FIXED_LIST && (
-            <>
-              <input list="brands" value={marca} onChange={(e)=>setMarca(e.target.value)} placeholder="Marca de alfajor" className="rounded-xl border px-3 py-2 outline-none ring-emerald-500 focus:ring" />
-              <input value={foto} onChange={(e)=>setFoto(e.target.value)} placeholder="URL de foto (opcional)" className="rounded-xl border px-3 py-2 outline-none ring-emerald-500 focus:ring" />
-              <datalist id="brands">{BRAND_SUGGESTIONS.map(b => <option key={b} value={b} />)}</datalist>
-              <button onClick={addTeam} disabled={!canAddTeam} className={`rounded-xl px-3 py-2 font-medium ${canAddTeam?"bg-emerald-600 text-white hover:bg-emerald-700":"bg-slate-200 text-slate-500"}`}>Agregar alfajor</button>
-              <button onClick={loadSamples} className="rounded-xl border border-slate-300 px-3 py-2 font-medium hover:bg-white">Cargar lista sugerida</button>
-              {brandTaken && (<div className="col-span-full text-xs text-rose-600">Ya existe un participante con la marca «{marca}». Elegí otra.</div>)}
-            </>
-          )}
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {participants.map((p, idx)=> (
-          <div key={p.id} className="flex items-center justify-between rounded-2xl border bg-white p-3">
-            <div className="flex min-w-0 items-center gap-3">
-              {p.photo ? (<img src={p.photo} alt={p.marca} className="h-10 w-10 rounded-lg object-cover" />) : (<span className="h-10 w-10 shrink-0 rounded-lg" style={{background:p.color||"#E2E8F0"}} />)}
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">{idx+1}. {p.marca}</div>
-                {p.photo && <div className="truncate text-xs text-slate-500">Foto cargada</div>}
-              </div>
-            </div>
-            {!FIXED_LIST && (<button onClick={()=>removeTeam(p.id)} className="rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100">Quitar</button>)}
-          </div>
-        ))}
-        </div>
-
-        <hr className="my-6"/>
-        <h3 className="mb-2 text-base font-semibold">Evaluadores/Jurado ({evaluators.length})</h3>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <input value={nombreEval} onChange={(e)=>setNombreEval(e.target.value)} placeholder="Nombre del evaluador" className="rounded-xl border px-3 py-2 outline-none ring-emerald-500 focus:ring" />
-          <button onClick={addEval} disabled={!canAddEval} className={`rounded-xl px-3 py-2 font-medium ${canAddEval?"bg-emerald-600 text-white hover:bg-emerald-700":"bg-slate-200 text-slate-500"}`}>Agregar evaluador</button>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {evaluators.map(e => (
-            <span key={e.id} className="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-1 text-sm">
-              {e.nombre}
-              <button onClick={()=>removeEval(e.id)} className="text-xs text-slate-500 hover:underline">quitar</button>
-            </span>
-          ))}
-        </div>
-
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-slate-500">Definí {targetCount} alfajores y al menos 1 evaluador.</div>
-          <div className="flex items-center gap-2">
-            {!FIXED_LIST && (<button onClick={()=>setShowPhotoBulk(true)} className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-white">Cargar URLs de fotos</button>)}
-            <button onClick={onReady} disabled={!ready} className={`rounded-2xl px-4 py-2 text-sm font-semibold ${ready?"bg-emerald-600 text-white hover:bg-emerald-700":"bg-slate-200 text-slate-500"}`}>Ir a Fase de grupos</button>
-          </div>
-        </div>
-      </div>
-
-      <Tips />
-    </section>
-  );
-}
-
-function Tips() {
-  return (
-    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-      <div className="rounded-2xl border bg-white p-4 text-sm text-slate-700">
-        <div className="mb-2 font-semibold">Reglamento</div>
-        12 → 4 grupos de 3 | 16 → 4 grupos de 4. Cada evaluador puntúa (1–10) a todos los alfajores de su grupo. El promedio define la tabla. Avanza el 1º de cada grupo a Semifinales.
-      </div>
-      <div className="rounded-2xl border bg-white p-4 text-sm text-slate-700">
-        <div className="mb-2 font-semibold">Desempates</div>
-        Promedio mayor → Mediana → Más 10s → si persiste, desempate manual.
-      </div>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Fase de grupos (calificaciones 1–10 por evaluador)
-// ────────────────────────────────────────────────────────────────────────────────
-
-function FaseDeGrupos({
-  targetCount,
-  participants,
-  evaluators,
-  groups,
-  setGroups,
-  onReady,
-}: {
-  targetCount: number;
-  participants: Team[];
-  evaluators: Evaluator[];
-  groups: Group[];
-  setGroups: (g: Group[]) => void;
-  onReady: (semis: KoMatch[]) => void;
-}) {
-  // armar grupos si no existen
-  useEffect(() => {
-    if ((targetCount !== 12 && targetCount !== 16) || participants.length !== targetCount) return;
-    const wantedSize = targetCount === 12 ? 3 : 4;
-    if (groups.length === 0) {
-      const shuffled = [...participants].sort(() => Math.random() - 0.5);
-      const chunks: Team[][] = [
-        shuffled.slice(0, wantedSize),
-        shuffled.slice(wantedSize, wantedSize*2),
-        shuffled.slice(wantedSize*2, wantedSize*3),
-        shuffled.slice(wantedSize*3, wantedSize*4),
-      ];
-      const names: GroupName[] = ["A","B","C","D"];
-      const gs: Group[] = chunks.map((chunk, i) => ({
-        name: names[i],
-        teamIds: chunk.map(t=>t.id),
-        scores: Object.fromEntries(chunk.map(t => [t.id, {}]))
-      }));
-      setGroups(gs);
+    function renderFinal(){
+      viewFinal.innerHTML = '';
+      const m = state.finalMatch; if (!m){ viewFinal.innerHTML = '<div class="panel">No hay final aún.</div>'; return; }
+      const card = document.createElement('div'); card.className='panel';
+      card.appendChild(koRatingsTable(m));
+      const ready = isKoResolved(m); const btn = document.createElement('button'); btn.className='btn primary'; btn.textContent='Coronar Campeón'; btn.disabled=!ready;
+      btn.onclick = ()=> { const win = pickKoWinner(m); if(win){ state.championId = win; state.phase='campeon'; save(); render(); } };
+      const foot = document.createElement('div'); foot.className='row'; foot.style.justifyContent='flex-end'; foot.appendChild(btn);
+      viewFinal.appendChild(card); viewFinal.appendChild(foot);
     }
-  }, [participants, targetCount, groups, setGroups]);
 
-  const setScore = (groupName: GroupName, teamId: string, evaluatorId: string, value?: number) => {
-    const v = clampScoreDecimal(value);
-    setGroups(groups.map(g => {
-      if (g.name !== groupName) return g;
-      return {
-        ...g,
-        scores: {
-          ...g.scores,
-          [teamId]: { ...g.scores[teamId], [evaluatorId]: v }
-        }
-      };
-    }));
-  };
+    function renderChampion(){
+      const champ = state.participants.find(p=>p.id===state.championId);
+      viewCampeon.innerHTML = `<div class='panel' style='text-align:center;'>\
+        <div class='ok' style='text-transform:uppercase; letter-spacing:.06em;'>¡Campeón del Mundial de Alfajores!</div>\
+        <div style='font-size:28px; font-weight:800; margin-top:8px;'>🥇 ${champ? esc(champ.nombre):'—'} <span class='muted'>(${champ? esc(champ.marca):''})</span></div>\
+        <div style='margin-top:16px;'><button class='btn' onclick="resetTournament()">Empezar un nuevo torneo</button></div>\
+      </div>`;
+    }
 
-  const tables = useMemo(() => groups.map(g => ({ group: g.name, rows: computeGroupTable(g, participants, evaluators) })), [groups, participants, evaluators]);
+    window.resetTournament = function(){ if (confirm('¿Reiniciar todo el torneo?')) { state = JSON.parse(JSON.stringify(initial)); save(); render(); } }
 
-  const ready = groups.length === 4 && groups.every(g => g.teamIds.every(id => haveAnyScore(g.scores[id])));
+    // ==========================
+    // Utils
+    // ==========================
+    function esc(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
-  const avanzar = () => {
-    if (!ready) return;
-    const map = Object.fromEntries(groups.map(g=>[g.name, g])) as Record<GroupName, Group>;
-    const A = pickGroupWinnerByRatings(map["A"], participants, evaluators).team.id;
-    const B = pickGroupWinnerByRatings(map["B"], participants, evaluators).team.id;
-    const C = pickGroupWinnerByRatings(map["C"], participants, evaluators).team.id;
-    const D = pickGroupWinnerByRatings(map["D"], participants, evaluators).team.id;
-    const semiMatches: KoMatch[] = [
-      { id: uid(), homeId: A, awayId: D },
-      { id: uid(), homeId: B, awayId: C },
-    ];
-    onReady(semiMatches);
-  };
-
-  return (
-    <section>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Fase de grupos — Calificaciones 1–10</h2>
-        <button onClick={avanzar} disabled={!ready} className={`rounded-xl px-3 py-2 text-sm font-semibold ${ready?"bg-emerald-600 text-white hover:bg-emerald-700":"bg-slate-200 text-slate-500"}`}>Avanzar a Semifinales</button>
-      </div>
-
-      {groups.length === 0 && (
-        <div className="rounded-2xl border bg-white p-6 text-sm text-slate-600">Cargá {targetCount} participantes para generar los grupos.</div>
-      )}
-
-      {groups.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          {groups.map(g => (
-            <div key={g.name} className="rounded-2xl border bg-white p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-base font-semibold">Grupo {g.name}</h3>
-                <div className="text-xs text-slate-500">{g.teamIds.length} alfajores • {evaluators.length} evaluadores</div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Alfajor</th>
-                      {evaluators.map(ev => (
-                        <th key={ev.id} className="px-3 py-2 text-center whitespace-nowrap">{ev.nombre}</th>
-                      ))}
-                      <th className="px-3 py-2 text-center">Prom.</th>
-                      <th className="px-3 py-2 text-center">Mediana</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {g.teamIds.map(tid => (
-                      <tr key={tid} className="odd:bg-white even:bg-slate-50">
-                        <td className="px-3 py-2">
-                          <TeamLabel id={tid} participants={participants} />
-                        </td>
-                        {evaluators.map(ev => (
-                          <td key={ev.id} className="px-2 py-1 text-center">
-                            <ScoreBox
-                              value={g.scores[tid]?.[ev.id]}
-                              onChange={(v)=>setScore(g.name, tid, ev.id, v)}
-                            />
-                          </td>
-                        ))}
-                        <td className="px-3 py-2 text-center font-medium">{fmtAvg(avg(Object.values(g.scores[tid]||{})))}</td>
-                        <td className="px-3 py-2 text-center">{fmtAvg(median(Object.values(g.scores[tid]||{})))}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-4">
-                <GroupStandings group={g} participants={participants} evaluators={evaluators} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function TeamLabel({ id, participants }: { id: string; participants: Team[] }) {
-  const t = participants.find(p => p.id === id)!;
-  return (
-    <div className="flex items-center gap-2">
-      {t.photo ? (<img src={t.photo} alt={t.marca} className="h-5 w-5 rounded-sm object-cover" />) : (<span className="h-3 w-3 rounded-full" style={{background:t.color}} />)}
-      <span className="font-medium">{t.marca}</span>
-    </div>
-  );
-}} />
-      <span className="font-medium">{t.nombre}</span>
-      <span className="text-xs text-slate-500">({t.marca})</span>
-    </div>
-  );
-}
-
-function GroupStandings({ group, participants, evaluators }: { group: Group; participants: Team[]; evaluators: Evaluator[] }) {
-  const rows = computeGroupTable(group, participants, evaluators);
-  return (
-    <div className="overflow-hidden rounded-2xl border">
-      <div className="border-b px-4 py-2 text-sm font-semibold">Tabla — Grupo {group.name}</div>
-      <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-slate-600">
-          <tr>
-            <th className="px-3 py-2 text-left">Equipo</th>
-            <th className="px-3 py-2 text-center">Prom.</th>
-            <th className="px-3 py-2 text-center">Mediana</th>
-            <th className="px-3 py-2 text-center">#Votos</th>
-            <th className="px-3 py-2 text-center">#10s</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(r => (
-            <tr key={r.team.id} className="odd:bg-white even:bg-slate-50">
-              <td className="px-3 py-2"><TeamLabel id={r.team.id} participants={participants} /></td>
-              <td className="px-3 py-2 text-center font-semibold">{fmtAvg(r.avg)}</td>
-              <td className="px-3 py-2 text-center">{fmtAvg(r.median)}</td>
-              <td className="px-3 py-2 text-center">{r.count}</td>
-              <td className="px-3 py-2 text-center">{r.tens}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="px-4 py-2 text-sm text-slate-600">Avanza: <b>{rows[0]?.team.marca || "—"}</b></div>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Semifinales — ratings por evaluador o resolución manual del empate
-// ────────────────────────────────────────────────────────────────────────────────
-
-function Semifinales({ participants, semis, setSemis, onReady }:{
-  participants: Team[];
-  semis: KoMatch[];
-  setSemis: (m: KoMatch[]) => void;
-  onReady: (finalM: KoMatch) => void;
-}) {
-  const team = (id: string) => participants.find(p=>p.id===id)!;
-  const setWinner = (mid: string, tid: string) => setSemis(semis.map(m => m.id===mid? { ...m, winnerId: tid } : m));
-  const resolved = useMemo(()=> semis.every(m => Boolean(m.winnerId)), [semis]);
-  const avanzar = () => {
-    if (!resolved) return;
-    const w = semis.map(m => m.winnerId!) as string[];
-    const finalM: KoMatch = { id: uid(), homeId: w[0], awayId: w[1] };
-    onReady(finalM);
-  };
-  return (
-    <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Semifinales (elección directa)</h2>
-        <button onClick={avanzar} disabled={!resolved} className={`rounded-xl px-3 py-2 text-sm font-semibold ${resolved?"bg-emerald-600 text-white hover:bg-emerald-700":"bg-slate-200 text-slate-500"}`}>Armar Final</button>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {semis.map((m, i) => (
-          <div key={m.id} className="rounded-2xl border bg-white p-4">
-            <div className="mb-3 text-sm font-semibold">Semifinal {i+1}</div>
-            <div className="grid grid-cols-2 gap-3">
-              {[m.homeId, m.awayId].map((tid)=>{
-                const t = team(tid);
-                const selected = m.winnerId === tid;
-                return (
-                  <button key={tid} onClick={()=>setWinner(m.id, tid)} className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left ${selected?"border-emerald-500 bg-emerald-50":"hover:bg-slate-50"}`}>
-                    {t.photo ? (<img src={t.photo} alt={t.marca} className="h-10 w-10 rounded-lg object-cover" />) : (<span className="h-10 w-10 rounded-lg" style={{background:t.color}} />)}
-                    <div className="font-medium">{t.marca}</div>
-                  </button>
-                );
-              })}
-            </div>
-            {m.winnerId && <div className="mt-2 text-sm text-emerald-700">Elegido: <b>{team(m.winnerId).marca}</b></div>}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}), ...(side==="home"?{[evaluatorId]: clampScore(value)}:{} ) },
-        away: { ...(m.ratings?.away||{}), ...(side==="away"?{[evaluatorId]: clampScore(value)}:{} ) },
-      },
-      winnerId: undefined,
-    }): m));
-  };
-
-  const resolved = useMemo(()=> semis.every(m => isKoResolvedByRatings(m)), [semis]);
-
-  const avanzar = () => {
-    if (!resolved) return;
-    const w = semis.map(m => pickKoWinnerByRatings(m));
-    const finalM: KoMatch = { id: uid(), homeId: w[0], awayId: w[1], ratings: { home: {}, away: {} } };
-    onReady(finalM);
-  };
-
-  return (
-    <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Semifinales</h2>
-        <button onClick={avanzar} disabled={!resolved} className={`rounded-xl px-3 py-2 text-sm font-semibold ${resolved?"bg-emerald-600 text-white hover:bg-emerald-700":"bg-slate-200 text-slate-500"}`}>Armar Final</button>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {semis.map((m, i) => (
-          <div key={m.id} className="rounded-2xl border bg-white p-4">
-            <div className="mb-3 text-sm font-semibold">Semifinal {i+1}</div>
-            <KoRatingsCard match={m} evaluators={evaluators} home={team(m.homeId)} away={team(m.awayId)} setRating={setRating} setWinner={(id)=> setSemis(semis.map(x=>x.id===m.id?{...x,winnerId:id}:x))} />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Final({ participants, match, setMatch, onChampion }:{
-  participants: Team[]; match: KoMatch; setMatch: (m: KoMatch)=>void; onChampion: (id: string)=>void;
-}) {
-  const team = (id: string) => participants.find(p=>p.id===id)!;
-  const choose = (tid: string) => setMatch({ ...match, winnerId: tid });
-  const ready = Boolean(match.winnerId);
-  return (
-    <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Final (elección directa)</h2>
-        <button onClick={()=> match.winnerId && onChampion(match.winnerId)} disabled={!ready} className={`rounded-xl px-3 py-2 text-sm font-semibold ${ready?"bg-emerald-600 text-white hover:bg-emerald-700":"bg-slate-200 text-slate-500"}`}>Coronar Campeón</button>
-      </div>
-      <div className="rounded-2xl border bg-white p-4">
-        <div className="grid grid-cols-2 gap-3">
-          {[match.homeId, match.awayId].map((tid)=>{
-            const t = team(tid);
-            const selected = match.winnerId === tid;
-            return (
-              <button key={tid} onClick={()=>choose(tid)} className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left ${selected?"border-emerald-500 bg-emerald-50":"hover:bg-slate-50"}`}>
-                {t.photo ? (<img src={t.photo} alt={t.marca} className="h-12 w-12 rounded-lg object-cover" />) : (<span className="h-12 w-12 rounded-lg" style={{background:t.color}} />)}
-                <div className="font-medium">{t.marca}</div>
-              </button>
-            );
-          })}
-        </div>
-        {match.winnerId && <div className="mt-3 text-sm text-emerald-700">Elegido: <b>{team(match.winnerId).marca}</b></div>}
-      </div>
-    </section>
-  );
-}), ...(side==="home"?{[evaluatorId]: clampScore(value)}:{}) },
-        away: { ...(match.ratings?.away||{}), ...(side==="away"?{[evaluatorId]: clampScore(value)}:{}) },
-      },
-      winnerId: undefined,
-    });
-  };
-
-  const ready = isKoResolvedByRatings(match);
-  const winnerId = ready ? pickKoWinnerByRatings(match) : undefined;
-
-  return (
-    <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Final</h2>
-        <button onClick={()=>winnerId && onChampion(winnerId)} disabled={!ready} className={`rounded-xl px-3 py-2 text-sm font-semibold ${ready?"bg-emerald-600 text-white hover:bg-emerald-700":"bg-slate-200 text-slate-500"}`}>Coronar Campeón</button>
-      </div>
-
-      <div className="rounded-2xl border bg-white p-4">
-        <KoRatingsCard match={match} evaluators={evaluators} home={team(match.homeId)} away={team(match.awayId)} setRating={(id,side,ev,v)=> setRating(side as any, ev, v)} setWinner={(id)=> setMatch({ ...match, winnerId: id })} />
-      </div>
-    </section>
-  );
-}
-
-function KoRatingsCard({ match, evaluators, home, away, setRating, setWinner }:{
-  match: KoMatch;
-  evaluators: Evaluator[];
-  home: Team; away: Team;
-  setRating: (matchId: string, side: "home"|"away", evaluatorId: string, value?: number)=>void;
-  setWinner: (id?: string)=>void;
-}){
-  const avgHome = avg(Object.values(match.ratings?.home||{}));
-  const avgAway = avg(Object.values(match.ratings?.away||{}));
-  const tied = isFinite(avgHome) && isFinite(avgAway) && Math.abs(avgHome-avgAway) < 1e-9;
-
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border p-3">
-          <TeamLabel id={home.id} participants={[home, away]} />
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {evaluators.map(ev => (
-              <ScoreBox key={ev.id} value={match.ratings?.home?.[ev.id]} onChange={(v)=>setRating(match.id, "home", ev.id, v)} label={ev.nombre} />
-            ))}
-          </div>
-          <div className="mt-2 text-sm">Promedio: <b>{fmtAvg(avgHome)}</b></div>
-        </div>
-        <div className="rounded-xl border p-3">
-          <TeamLabel id={away.id} participants={[home, away]} />
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {evaluators.map(ev => (
-              <ScoreBox key={ev.id} value={match.ratings?.away?.[ev.id]} onChange={(v)=>setRating(match.id, "away", ev.id, v)} label={ev.nombre} />
-            ))}
-          </div>
-          <div className="mt-2 text-sm">Promedio: <b>{fmtAvg(avgAway)}</b></div>
-        </div>
-      </div>
-
-      {tied && (
-        <div className="rounded-xl border bg-amber-50 p-3 text-sm">
-          Empate por promedio. Elegí un ganador manual:
-          <div className="mt-2 flex gap-2">
-            <button onClick={()=>setWinner(home.id)} className="rounded-xl border px-3 py-1 text-sm hover:bg-white">Gana {home.nombre}</button>
-            <button onClick={()=>setWinner(away.id)} className="rounded-xl border px-3 py-1 text-sm hover:bg-white">Gana {away.nombre}</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Campeón
-// ────────────────────────────────────────────────────────────────────────────────
-
-function Campeon({ champion, onReset }: { champion: Team; onReset: () => void }) {
-  return (
-    <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-amber-50 to-emerald-50 p-8">
-      <Confetti />
-      <div className="relative z-10 flex flex-col items-center gap-2 text-center">
-        <div className="text-sm uppercase tracking-wide text-emerald-700">¡Campeón del Mundial de Alfajores!</div>
-        <div className="mt-1 flex items-center gap-3 text-3xl font-black">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-400">🥇</span>
-          {champion.marca}
-        </div>
-        <button onClick={onReset} className="mt-6 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-white">Empezar un nuevo torneo</button>
-      </div>
-    </section>
-  );
-}
-
-function Confetti() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      {Array.from({ length: 80 }).map((_, i) => (
-        <span key={i} className="absolute h-2 w-2 animate-[fall_3s_linear_infinite] rounded-sm" style={{ left: `${Math.random()*100}%`, top: `-${Math.random()*20+5}%`, background: randomConfettiColor(), animationDelay: `${Math.random()*3}s`, transform: `rotate(${Math.random()*360}deg)` }} />
-      ))}
-      <style>{`@keyframes fall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(120vh) rotate(360deg);opacity:.7}}`}</style>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Inputs & helpers
-// ────────────────────────────────────────────────────────────────────────────────
-
-function ScoreBox({ value, onChange, label }:{ value?: number; onChange:(v?: number)=>void; label?: string }){
-  return (
-    <div className="flex items-center gap-2">
-      {label && <span className="hidden text-xs text-slate-500 sm:block">{label}</span>}
-      <input type="number" min={1} max={10} step={0.1} value={isDefined(value)? value: ""} onChange={(e)=>{
-        const v = e.target.value; onChange(v==="" ? undefined : clampScoreDecimal(Number(v))); }} className="w-20 rounded-xl border px-3 py-2 text-center text-sm outline-none ring-emerald-500 focus:ring" placeholder="–" />
-    </div>
-  );
-}
-
-function isDefined<T>(x: T | undefined | null): x is T { return x !== undefined && x !== null; }
-function clampScore(x?: number){ if(!isDefined(x)) return undefined; const v = Math.max(1, Math.min(10, Math.floor(x))); return v; }
-function clampScoreDecimal(x?: number){ if(!isDefined(x)) return undefined; const v = Math.max(1, Math.min(10, x)); return Math.round(v*100)/100; }
-function avg(arr: number[]){ if(!arr.length) return NaN; return arr.reduce((a,b)=>a+b,0)/arr.length; }
-function median(arr:number[]){ if(!arr.length) return NaN; const a=[...arr].sort((x,y)=>x-y); const m=Math.floor(a.length/2); return a.length%2? a[m] : (a[m-1]+a[m])/2; }
-function countTens(arr:number[]){ return arr.filter(v=>v===10).length; }
-function fmtAvg(x:number){ return isFinite(x)? x.toFixed(2) : "—"; }
-
-function haveAnyScore(map: Record<string, number>){ return Object.values(map||{}).some(v=>isDefined(v)); }
-
-function computeGroupTable(group: Group, participants: Team[], evaluators: Evaluator[]){
-  const rows = group.teamIds.map(tid => {
-    const vals = Object.values(group.scores[tid]||{}).filter(isDefined) as number[];
-    return {
-      team: participants.find(p=>p.id===tid)!,
-      avg: avg(vals),
-      median: median(vals),
-      count: vals.length,
-      tens: countTens(vals),
-    };
-  });
-  return rows.sort((a,b)=> (b.avg - a.avg) || (b.median - a.median) || (b.tens - a.tens) || a.team.marca.localeCompare(b.team.marca));
-}
-
-function pickGroupWinnerByRatings(group: Group, participants: Team[], evaluators: Evaluator[]){
-  const table = computeGroupTable(group, participants, evaluators);
-  return { group: group.name, team: table[0].team };
-}
-
-function isKoResolvedByRatings(m: KoMatch){
-  const ah = avg(Object.values(m.ratings?.home||{}));
-  const aw = avg(Object.values(m.ratings?.away||{}));
-  if (!isFinite(ah) || !isFinite(aw)) return false; // ambos lados necesitan al menos 1 voto
-  if (Math.abs(ah-aw) > 1e-9) return true;
-  return Boolean(m.winnerId);
-}
-
-function pickKoWinnerByRatings(m: KoMatch){
-  const ah = avg(Object.values(m.ratings?.home||{}));
-  const aw = avg(Object.values(m.ratings?.away||{}));
-  if (!isFinite(ah) || !isFinite(aw)) throw new Error("Partido no resuelto");
-  if (ah > aw) return m.homeId;
-  if (aw > ah) return m.awayId;
-  if (!m.winnerId) throw new Error("Empate sin ganador");
-  return m.winnerId;
-}
-
-function pickPastelColor(){ const hues=[140,160,180,200,220,260,300,20,40]; const h=hues[Math.floor(Math.random()*hues.length)]; const s=60+Math.floor(Math.random()*10); const l=75+Math.floor(Math.random()*5); return `hsl(${h} ${s}% ${l}%)`; }
-function randomConfettiColor(){ const palette=["#10B981", "#F59E0B", "#6366F1", "#EF4444", "#14B8A6", "#84CC16"]; return palette[Math.floor(Math.random()*palette.length)]; }
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Lobby & helpers (colaboración en vivo)
-// ────────────────────────────────────────────────────────────────────────────────
-
-function Lobby({ onCreate, onJoin, cloudEnabled }: { onCreate: () => void; onJoin: (id: string) => void; cloudEnabled: boolean }) {
-  const [code, setCode] = useState("");
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <Header targetCount={12} />
-      <div className="mx-auto max-w-lg px-4 pb-24">
-        <div className="mt-8 rounded-3xl border bg-white p-6">
-          <h2 className="mb-2 text-lg font-semibold">Crear o unirse a un Mundial</h2>
-          <p className="mb-4 text-sm text-slate-600">
-            {cloudEnabled ? "La colaboración en vivo está habilitada." : "Colaboración en vivo deshabilitada: completá FIREBASE_CONFIG para habilitarla. Igual podés usarlo en este navegador y seguir más tarde."}
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <button onClick={onCreate} className="rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700">Crear mundial nuevo</button>
-            <div className="flex items-center gap-2">
-              <input value={code} onChange={(e)=>setCode(e.target.value.toUpperCase())} placeholder="Código (6 letras)" className="w-full rounded-xl border px-3 py-2" />
-              <button onClick={()=> code && onJoin(code)} className="rounded-xl border px-3 py-2 font-medium hover:bg-white">Unirse</button>
-            </div>
-          </div>
-          <div className="mt-4 text-xs text-slate-500">Compartí el link para que otros vean y carguen en tiempo real.</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function makeRoomId(){
-  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // sin O/I
-  let s = ""; for (let i=0;i<6;i++) s += letters[Math.floor(Math.random()*letters.length)];
-  return s;
-}
-function getTournamentIdFromUrl(){
-  const u = new URL(window.location.href); return (u.searchParams.get("t")||"").toUpperCase() || null;
-}
-function setUrlTournament(id: string){
-  const u = new URL(window.location.href); u.searchParams.set("t", id); window.history.replaceState({}, "", u.toString());
-}
-
+    // Start
+    init();
+  </script>
+</body>
+</html>
