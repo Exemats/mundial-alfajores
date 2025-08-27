@@ -83,11 +83,8 @@
     </section>
 
     <section id="view-grupos" class="grid" style="display:none; margin-top:12px;"></section>
-
     <section id="view-semis" class="grid" style="display:none; margin-top:12px;"></section>
-
     <section id="view-final" class="grid" style="display:none; margin-top:12px;"></section>
-
     <section id="view-campeon" class="grid" style="display:none; margin-top:12px;"></section>
 
     <div class="footer">
@@ -116,7 +113,6 @@
       { marca: "Fulbito", photo: "https://http2.mlstatic.com/D_NQ_NP_895461-MLA76008036712_052024-O.webp" },
       { marca: "Jorgito", photo: "https://www.cucinare.tv/wp-content/uploads/2020/07/Jorgito.jpg" },
       { marca: "Terrabusi triple", photo: "https://www.farmaciassanchezantoniolli.com.ar/13210-medium_default/terrabusi-alfajor-triple-cl%C3%A1sico-x-70g.jpg" },
-      /* CORRECCIÓN 1: URL de Bon o Bon corregida */
       { marca: "Bon o Bon", photo: "https://dulcistore.com.ar/wp-content/uploads/2020/07/alfajor-bon-o-bon-simple-negro.jpg" },
       { marca: "B&N Bagley", photo: "https://statics.dinoonline.com.ar/imagenes/full_600x600_ma/2182006_f.jpg" },
     ].map((x)=>({ id: slug(x.marca), ...x, color: pastel() }));
@@ -181,7 +177,14 @@
     function render(){
       phaseChip.textContent = state.phase.charAt(0).toUpperCase()+state.phase.slice(1);
       // participantes fijos
-      pList.innerHTML = state.participants.map((p,i)=>`<div class="card"><img class="thumb" src="${esc(p.photo||'')}" alt="${esc(p.marca)}"/><div><div><b>${i+1}. ${esc(p.marca)}</b></div></div></div>`).join('');
+      pList.innerHTML = state.participants.map((p,i)=>`
+        <div class="card">
+          <img class="thumb" src="${esc(p.photo||'')}" alt="${esc(p.marca)}"/>
+          <div>
+            <div><b>${i+1}. ${esc(p.marca)}</b></div>
+          </div>
+        </div>
+      `).join('');
       // evaluadores
       evalCount.textContent = `${state.evaluators.length} cargados`;
       eList.innerHTML = state.evaluators.map(e=>`<span class="pill">${esc(e.nombre)} <a href="#" onclick="removeE('${e.id}')" style="margin-left:8px; color:#64748b;">×</a></span>`).join(' ');
@@ -247,7 +250,6 @@
             inp.type='number'; inp.min=1; inp.max=10; inp.step=0.1; inp.style.width='80px';
             const v = g.scores[tid]?.[ev.id]; inp.value = defined(v)? v : '';
 
-            // Permitir escribir decimales sin re-render en cada tecla
             inp.oninput = () => {
               if(!defined(g.scores[tid])) g.scores[tid]={};
               g.scores[tid][ev.id] = inp.value;
@@ -305,7 +307,6 @@
     // =============== Semifinales / Final (elección directa) ===============
     function pickGroupWinner(g){ return computeGroupTable(g)[0]?.id; }
 
-    // AHORA: semifinales sorteadas al azar entre los 4 ganadores de grupo
     function makeSemis(){
       const map = Object.fromEntries(state.groups.map(g=>[g.name,g]));
       const winners = ['A','B','C','D'].map(n=> pickGroupWinner(map[n])).filter(Boolean);
@@ -325,7 +326,7 @@
         card.innerHTML = `<div class="muted" style="margin-bottom:6px;">Semifinal ${i+1}</div>`;
         const row = document.createElement('div'); row.className='grid grid-2';
         [h,a].forEach(t=>{
-          const b = document.createElement('button'); b.className='btn'; b.style.display='flex'; b.style.alignItems='center'; b.style.gap='8px'; b.style.padding='10px 12px'; b.style.textAlign='left'; b.style.borderRadius='12px'; b.style.border='1px solid #cbd5e1';
+          const b = document.createElement('button'); b.className='btn'; b.style.display='flex'; b.style.alignItems='center'; b.style.gap='8px'; b.style.padding='10px 12px'; b.style.textAlign='left';
           if (m.winnerId===t.id){ b.style.background='#ecfdf5'; b.style.borderColor='#10b981'; }
           const img = document.createElement('img'); img.className='thumb-lg'; img.src=t.photo||''; img.alt=t.marca;
           const span = document.createElement('span'); span.textContent = t.marca; span.style.fontWeight='600';
@@ -334,7 +335,12 @@
           row.appendChild(b);
         });
         card.appendChild(row);
-        if (m.winnerId){ const choose = document.createElement('div'); choose.className='ok'; choose.style.marginTop='6px'; choose.innerHTML = `Elegido: <b>${esc(teamById(m.winnerId).marca)}</b>`; card.appendChild(choose); }
+        if (m.winnerId){
+          const choose = document.createElement('div');
+          choose.className='ok'; choose.style.marginTop='6px';
+          choose.innerHTML = `Elegido: <b>${esc(teamById(m.winnerId).marca)}</b>`;
+          card.appendChild(choose);
+        }
         grid.appendChild(card);
       });
       viewSemis.appendChild(grid);
@@ -352,7 +358,7 @@
       const card = document.createElement('div'); card.className='panel';
       const wrap = document.createElement('div'); wrap.className='grid grid-2';
       [teamById(m.homeId), teamById(m.awayId)].forEach(t=>{
-        const b = document.createElement('button'); b.className='btn'; b.style.display='flex'; b.style.alignItems='center'; b.style.gap='8px'; b.style.padding='12px'; b.style.textAlign='left'; b.style.borderRadius='12px'; b.style.border='1px solid #cbd5e1';
+        const b = document.createElement('button'); b.className='btn'; b.style.display='flex'; b.style.alignItems='center'; b.style.gap='8px'; b.style.padding='12px'; b.style.textAlign='left'; b.style.fontSize='18px';
         if (m.winnerId===t.id){ b.style.background='#ecfdf5'; b.style.borderColor='#10b981'; }
         const img = document.createElement('img'); img.className='thumb-lg'; img.src=t.photo||''; img.alt=t.marca;
         const span = document.createElement('span'); span.textContent = t.marca; span.style.fontWeight='700';
@@ -361,7 +367,12 @@
         wrap.appendChild(b);
       });
       card.appendChild(wrap);
-      if (m.winnerId){ const choose = document.createElement('div'); choose.className='ok'; choose.style.marginTop='6px'; choose.innerHTML = `Elegido: <b>${esc(teamById(m.winnerId).marca)}</b>`; card.appendChild(choose); }
+      if (m.winnerId){
+        const choose = document.createElement('div');
+        choose.className='ok'; choose.style.marginTop='6px';
+        choose.innerHTML = `Elegido: <b>${esc(teamById(m.winnerId).marca)}</b>`;
+        card.appendChild(choose);
+      }
       const foot = document.createElement('div'); foot.className='row'; foot.style.justifyContent='flex-end'; foot.style.marginTop='8px';
       const btn = document.createElement('button'); btn.className='btn primary'; btn.textContent='Coronar Campeón'; btn.disabled=!m.winnerId;
       btn.onclick = ()=>{
@@ -383,7 +394,7 @@
       viewCampeon.innerHTML = `<div class='panel' style='text-align:center;'>
         <div class='ok' style='text-transform:uppercase; letter-spacing:.06em;'>¡Campeón del Mundial de Alfajores!</div>
         <div style='font-size:28px; font-weight:800; margin-top:8px;'>🥇 ${champ? esc(champ.marca):'—'}</div>
-        <div style='margin-top:10px;'>${champ? `<img src='${esc(champ.photo||'')}' alt='${esc(champ.marca)}' style='width:160px;height:160px;object-fit:cover;border-radius:14px;border:1px solid #e2e8f0;'/>` : ''}</div>
+        <div style='margin-top:10px;'>${champ? `<img src='${esc(champ.photo||'')}' alt='${esc(champ.marca)}' style='width:160px;height:160px;object-fit:cover;border-radius:14px;border:1px solid #e2e8f0;'/>`:''}</div>
         <div style='margin-top:16px;'><button class='btn' onclick="resetTournament()">Empezar un nuevo torneo</button></div>
       </div>`;
     }
@@ -411,7 +422,6 @@
     }
 
     // =============== Utils ===============
-    /* CORRECCIÓN 2: Error de sintaxis en el objeto de reemplazo */
     function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
     // 🎉 Efecto de fuegos artificiales / confeti (sin librerías)
@@ -469,16 +479,4 @@
         for(let i=particles.length-1;i>=0;i--) if(particles[i].life<=0) particles.splice(i,1);
         if(particles.length>0) raf = requestAnimationFrame(draw);
         else{
-          window.removeEventListener('resize', onR);
-          canvas.remove();
-          cancelAnimationFrame(raf);
-        }
-      };
-      draw();
-    }
-
-    // start
-    init();
-  </script>
-</body>
-</html>
+          window.remove
