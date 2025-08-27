@@ -210,6 +210,7 @@
 
     // =============== Fase de grupos ===============
     function makeGroups(){
+      // Ya era sorteado: baraja participantes y reparte 4x4
       const size = 4; // fijo 16
       const shuffled = [...state.participants].sort(()=>Math.random()-0.5);
       const chunks = [shuffled.slice(0,size), shuffled.slice(size,size*2), shuffled.slice(size*2,size*3), shuffled.slice(size*3,size*4)];
@@ -250,13 +251,11 @@
             inp.type='number'; inp.min=1; inp.max=10; inp.step=0.1; inp.style.width='80px';
             const v = g.scores[tid]?.[ev.id]; inp.value = defined(v)? v : '';
 
-            // *** CAMBIO MINIMO: permitir escribir decimales sin perder el foco ***
-            // Guardamos el texto mientras se escribe, sin re-render.
+            // Permitir escribir decimales sin re-render en cada tecla
             inp.oninput = () => {
               if(!defined(g.scores[tid])) g.scores[tid]={};
               g.scores[tid][ev.id] = inp.value;
             };
-            // Al terminar la edición (blur/change) normalizamos, guardamos y re-renderizamos.
             const commit = () => {
               const val = clampScore(inp.value);
               if(!defined(g.scores[tid])) g.scores[tid]={};
@@ -266,7 +265,6 @@
             };
             inp.onchange = commit;
             inp.onblur = commit;
-            // *** FIN CAMBIO ***
 
             td.appendChild(inp); tr.appendChild(td);
           });
@@ -310,13 +308,16 @@
 
     // =============== Semifinales / Final (elección directa) ===============
     function pickGroupWinner(g){ return computeGroupTable(g)[0]?.id; }
+
+    // AHORA: semifinales sorteadas al azar entre los 4 ganadores de grupo
     function makeSemis(){
       const map = Object.fromEntries(state.groups.map(g=>[g.name,g]));
-      const A = pickGroupWinner(map['A']);
-      const B = pickGroupWinner(map['B']);
-      const C = pickGroupWinner(map['C']);
-      const D = pickGroupWinner(map['D']);
-      state.semis = [ { id: uid(), homeId:A, awayId:D, winnerId:null }, { id: uid(), homeId:B, awayId:C, winnerId:null } ];
+      const winners = ['A','B','C','D'].map(n=> pickGroupWinner(map[n])).filter(Boolean);
+      const shuffled = winners.sort(()=>Math.random()-0.5);
+      state.semis = [
+        { id: uid(), homeId: shuffled[0], awayId: shuffled[1], winnerId:null },
+        { id: uid(), homeId: shuffled[2], awayId: shuffled[3], winnerId:null }
+      ];
     }
 
     function renderSemis(){
@@ -367,7 +368,16 @@
       if (m.winnerId){ const choose = document.createElement('div'); choose.className='ok'; choose.style.marginTop='6px'; choose.innerHTML = `Elegido: <b>${esc(teamById(m.winnerId).marca)}</b>`; card.appendChild(choose); }
       const foot = document.createElement('div'); foot.className='row'; foot.style.justifyContent='flex-end'; foot.style.marginTop='8px';
       const btn = document.createElement('button'); btn.className='btn primary'; btn.textContent='Coronar Campeón'; btn.disabled=!m.winnerId;
-      btn.onclick = ()=>{ if(m.winnerId){ state.championId = m.winnerId; state.phase='campeon'; save(); render(); } };
+      btn.onclick = ()=>{ 
+        if(m.winnerId){ 
+          state.championId = m.winnerId; 
+          state.phase='campeon'; 
+          save(); 
+          render(); 
+          // 🎆 Celebración al definir campeón
+          setTimeout(celebrate, 50);
+        } 
+      };
       foot.appendChild(btn); card.appendChild(foot);
       viewFinal.appendChild(card);
     }
@@ -406,6 +416,69 @@
 
     // =============== Utils ===============
     function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#39;"}[c])); }
+
+    // 🎉 Efecto de fuegos artificiales / confeti (sin librerías)
+    function celebrate(){
+      const canvas = document.createElement('canvas');
+      canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;';
+      document.body.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+      let W,H;
+      function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+      resize(); const onR = ()=>resize(); window.addEventListener('resize', onR);
+
+      const colors = ['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#22c55e','#eab308'];
+      const particles = [];
+      const makeBurst = (cx,cy,count=180)=>{
+        for(let i=0;i<count;i++){
+          const angle = Math.random()*Math.PI*2;
+          const speed = 2 + Math.random()*6;
+          particles.push({
+            x:cx, y:cy,
+            vx: Math.cos(angle)*speed,
+            vy: Math.sin(angle)*speed - (1+Math.random()*2),
+            g: 0.12 + Math.random()*0.08,
+            life: 100+Math.random()*60,
+            size: 2 + Math.random()*3,
+            angle: Math.random()*Math.PI,
+            spin: (Math.random()-0.5)*0.3,
+            color: colors[(Math.random()*colors.length)|0],
+          });
+        }
+      };
+      // Tres estallidos
+      makeBurst(W*0.25, H*0.3);
+      setTimeout(()=>makeBurst(W*0.75, H*0.3), 200);
+      setTimeout(()=>makeBurst(W*0.5,  H*0.2), 400);
+
+      let raf;
+      const draw = ()=>{
+        ctx.clearRect(0,0,W,H);
+        particles.forEach(p=>{
+          p.vy += p.g;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.angle += p.spin;
+          p.life--;
+          ctx.save();
+          ctx.translate(p.x,p.y);
+          ctx.rotate(p.angle);
+          ctx.globalAlpha = Math.max(0, p.life/140);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+          ctx.restore();
+        });
+        // eliminar muertos
+        for(let i=particles.length-1;i>=0;i--) if(particles[i].life<=0) particles.splice(i,1);
+        if(particles.length>0) raf = requestAnimationFrame(draw);
+        else{
+          window.removeEventListener('resize', onR);
+          canvas.remove();
+          cancelAnimationFrame(raf);
+        }
+      };
+      draw();
+    }
 
     // start
     init();
