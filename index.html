@@ -3,69 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mundial de Alfajores — Simple</title>
+  <title>Mundial de Alfajores — Fijo (sin servidor)</title>
   <style>
-    :root { --emerald:#10b981; --slate:#475569; --bg:#f8fafc; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial; background:#f1f5f9; color:#0f172a; }
-    header { position:sticky; top:0; background:rgba(255,255,255,.9); backdrop-filter:saturate(180%) blur(6px); border-bottom:1px solid #e2e8f0; }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
-    h1 { font-size: 20px; margin: 0; display:flex; gap:10px; align-items:center; }
-    .chip { display:inline-flex; align-items:center; gap:6px; border:1px solid #e2e8f0; padding:4px 8px; border-radius:999px; background:white; font-size:12px; color:#64748b }
-    .panel { background:white; border:1px solid #e2e8f0; border-radius:16px; padding:16px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
-    .grid { display:grid; gap:12px; }
-    .grid-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
-    .grid-3 { grid-template-columns: repeat(3,minmax(0,1fr)); }
-    .btn { border:1px solid #cbd5e1; background:white; padding:8px 12px; border-radius:12px; font-weight:600; cursor:pointer; }
-    .btn.primary { background:var(--emerald); color:white; border-color:#059669; }
-    .btn:disabled { opacity:.5; cursor:not-allowed; }
-    input, select { width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:10px; }
-    table { width:100%; border-collapse: collapse; font-size: 14px; }
-    th, td { padding:8px 10px; border-bottom:1px solid #e2e8f0; text-align:center; }
-    th:first-child, td:first-child { text-align:left; }
-    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .pill { border-radius:999px; border:1px solid #e2e8f0; padding:4px 10px; font-size:12px; background:#fff; }
-    .muted { color:#64748b; font-size:12px; }
-    .tag { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
-    .footer { display:flex; justify-content:space-between; align-items:center; margin-top:16px; }
-    .alert { color:#b91c1c; font-size:12px; }
-    .ok { color:#065f46; font-size:12px; }
+    :root { --emerald:#10b981; --slate:#475569; --bg:#f1f5f9; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica Neue,Arial; background:#f8fafc; color:#0f172a; }
+    header{ position:sticky; top:0; z-index:10; background:rgba(255,255,255,.9); backdrop-filter:saturate(180%) blur(6px); border-bottom:1px solid #e2e8f0; }
+    .wrap{ max-width:1100px; margin:0 auto; padding:16px; }
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    h1{ font-size:20px; margin:0; display:flex; gap:10px; align-items:center; }
+    .chip{ display:inline-flex; align-items:center; gap:6px; border:1px solid #e2e8f0; padding:4px 8px; border-radius:999px; background:#fff; font-size:12px; color:#64748b; }
+    .panel{ background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:16px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .grid{ display:grid; gap:12px; }
+    .grid-2{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .auto{ grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); }
+    .btn{ border:1px solid #cbd5e1; background:#fff; padding:8px 12px; border-radius:12px; font-weight:600; cursor:pointer; }
+    .btn.primary{ background:var(--emerald); color:#fff; border-color:#059669; }
+    .btn:disabled{ opacity:.5; cursor:not-allowed; }
+    input,select,textarea{ width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:10px; }
+    table{ width:100%; border-collapse:collapse; font-size:14px; }
+    th,td{ padding:8px 10px; border-bottom:1px solid #e2e8f0; text-align:center; }
+    th:first-child,td:first-child{ text-align:left; }
+    .pill{ border-radius:999px; border:1px solid #e2e8f0; padding:4px 10px; font-size:12px; background:#fff; }
+    .muted{ color:#64748b; font-size:12px; }
+    .tag{ display:inline-block; width:10px; height:10px; border-radius:4px; margin-right:6px; vertical-align:middle; }
+    .card{ display:flex; gap:10px; align-items:center; border:1px solid #e2e8f0; border-radius:12px; padding:8px; background:#fff; }
+    .thumb{ width:40px; height:40px; border-radius:8px; object-fit:cover; background:#e2e8f0; }
+    .thumb-lg{ width:56px; height:56px; border-radius:10px; object-fit:cover; background:#e2e8f0; }
+    .footer{ display:flex; justify-content:space-between; align-items:center; margin-top:16px; }
+    .ok{ color:#065f46; font-size:12px; }
+    .warn{ color:#b91c1c; font-size:12px; }
+    .grid-cards{ display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); }
   </style>
 </head>
 <body>
   <header>
     <div class="wrap row" style="justify-content:space-between;">
       <h1>🥮 Mundial de Alfajores <span class="chip" id="phaseChip">Registro</span></h1>
-      <div class="muted">12/16 participantes · Grupos (promedio) · Semis · Final</div>
+      <div class="muted">Lista fija (16) · Grupos con decimales · Semis/Final por elección</div>
     </div>
   </header>
 
   <main class="wrap" style="padding-bottom:60px;">
-    <!-- Registro -->
+    <!-- Registro (participantes fijos + evaluadores) -->
     <section id="view-registro" class="grid" style="margin-top:12px;">
-      <div class="panel grid" style="gap:8px;">
+      <div class="panel grid">
         <div class="row" style="justify-content:space-between;">
-          <div class="row">
-            <label class="muted">Cantidad de participantes</label>
-          </div>
-          <select id="targetCount">
-            <option value="12">12 (4 grupos de 3)</option>
-            <option value="16">16 (4 grupos de 4)</option>
-          </select>
+          <b>Alfajores participantes</b>
+          <span class="muted">Lista fija — no editable</span>
         </div>
+        <div id="pList" class="grid-cards"></div>
 
-        <h3 style="margin:6px 0 0 0;">Participantes</h3>
-        <div class="grid grid-3">
-          <input id="pNombre" placeholder="Nombre del participante" />
-          <input id="pMarca" placeholder="Marca de alfajor" list="brands" />
-          <button class="btn" id="btnAddP">Agregar participante</button>
-        </div>
-        <datalist id="brands"></datalist>
-        <div id="brandWarn" class="alert" style="display:none;">Ya existe un participante con esa marca. Regla: 1 por marca.</div>
-
-        <div id="pList" class="grid" style="grid-template-columns: repeat(auto-fit,minmax(260px,1fr));"></div>
-
-        <h3 style="margin:10px 0 0 0;">Evaluadores/Jurado</h3>
+        <hr/>
+        <b>Evaluadores / Jurado</b>
         <div class="grid grid-3">
           <input id="eNombre" placeholder="Nombre del evaluador" />
           <button class="btn" id="btnAddE">Agregar evaluador</button>
@@ -76,7 +67,6 @@
         <div class="footer">
           <span class="muted" id="pStatus"></span>
           <div class="row">
-            <button class="btn" id="btnEjemplo">Autocompletar ejemplo</button>
             <button class="btn primary" id="btnGoGroups" disabled>Ir a Fase de grupos</button>
           </div>
         </div>
@@ -85,10 +75,10 @@
       <div class="panel">
         <b>Reglamento</b>
         <ul>
-          <li>12 → 4 grupos de 3 | 16 → 4 grupos de 4.</li>
-          <li>Regla: <b>1 participante por marca</b>.</li>
-          <li>En grupos, cada evaluador puntúa de 1 a 10. Orden por <b>promedio</b>, tiebreak <i>mediana</i> y cantidad de <i>10s</i>.</li>
-          <li>Avanza el 1º de cada grupo a Semifinales. Luego Final.</li>
+          <li>16 → 4 grupos de 4.</li>
+          <li>Grupos: cada evaluador puntúa de 1 a 10 con <b>decimales</b>. Orden por <b>promedio</b>, tiebreak por <i>mediana</i> y cantidad de <i>10s</i>.</li>
+          <li>Avanza el 1º de cada grupo a Semis.</li>
+          <li>Semis y Final: <b>elección directa</b> (sin puntajes).</li>
         </ul>
       </div>
     </section>
@@ -106,71 +96,73 @@
     <section id="view-campeon" class="grid" style="display:none; margin-top:12px;"></section>
 
     <div class="footer">
-      <span class="muted">Guardado en este navegador (localStorage).</span>
-      <button class="btn" id="btnReset">Reiniciar torneo</button>
+      <span class="muted">Modo sin servidor · Guardado local (localStorage)</span>
+      <div class="row">
+        <button class="btn" id="btnExport">Exportar CSV</button>
+        <button class="btn" id="btnReset">Reiniciar torneo</button>
+      </div>
     </div>
   </main>
 
   <script>
-    // ==========================
-    // Datos y estado (localStorage)
-    // ==========================
-    const BRAND_SUGGESTIONS = [
-      "Havanna","Cachafaz","Guaymallén","Jorgito","Capitán del Espacio","Milka",
-      "Bon o Bon","El Turco","Estancia El Rosario","Suchard","Tatin","Block",
-      "Terrabusi","Bagley","Fantoche","La Nirva"
-    ];
+    // =============== Datos fijos ==================
+    const FIXED_BRANDS = [
+      { marca: "Cachafaz", photo: "https://elnenearg.vtexassets.com/arquivos/ids/162359/ALFAJOR-CACHAFAZ-NEGRO-X60GR-1-9173.jpg?v=637971142874470000" },
+      { marca: "Rasta", photo: "https://acdn-us.mitiendanube.com/stores/001/185/658/products/rastanegro-f0c2decae45778a8e617150148107173-640-0.jpg" },
+      { marca: "Block", photo: "https://arjosimarprod.vtexassets.com/arquivos/ids/156289/cofler-block-alfajor-1clasico-60gr-1-971.jpg?v=637387318529270000" },
+      { marca: "Milka Mousse", photo: "https://ferniplastar.vtexassets.com/arquivos/ids/6012351/Alfajor-Milka-Mousse-42G.jpg?v=638878641446600000" },
+      { marca: "Oreo", photo: "https://http2.mlstatic.com/D_NQ_NP_754491-MLU70696877825_072023-O.webp" },
+      { marca: "Tita", photo: "https://http2.mlstatic.com/D_NQ_NP_861007-MLA76473483009_052024-O.webp" },
+      { marca: "Capitán del Espacio", photo: "https://www.capitandelespaciomr.com.ar/Prueba/capitan/images/pic1.png" },
+      { marca: "Vauquita", photo: "https://http2.mlstatic.com/D_NQ_NP_968050-MLU79311813463_092024-O.webp" },
+      { marca: "Pepitos", photo: "https://http2.mlstatic.com/D_NQ_NP_998442-MLA43106367276_082020-O.webp" },
+      { marca: "Aguila mini torta brownie", photo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLF67wVpUtd243EJLUvutoHjemLH52vnvNgA&s" },
+      { marca: "Fantoche", photo: "https://www.fantoche.com.ar/assets/images/productos/triplenegro.png" },
+      { marca: "Fulbito", photo: "https://http2.mlstatic.com/D_NQ_NP_895461-MLA76008036712_052024-O.webp" },
+      { marca: "Jorgito", photo: "https://www.cucinare.tv/wp-content/uploads/2020/07/Jorgito.jpg" },
+      { marca: "Terrabusi triple", photo: "https://www.farmaciassanchezantoniolli.com.ar/13210-medium_default/terrabusi-alfajor-triple-cl%C3%A1sico-x-70g.jpg" },
+      { marca: "Bon o Bon", photo: "https://arcorencasa.com/wp-content/uploads/2024/10/20241008-4303.webp" },
+      { marca: "B&N Bagley", photo: "https://statics.dinoonline.com.ar/imagenes/full_600x600_ma/2182006_f.jpg" },
+    ].map((x)=>({ id: slug(x.marca), ...x, color: pastel() }));
 
-    const KEY = 'mundial_alfajores_simple_v1';
+    // =============== Estado / storage ===============
+    const KEY = 'mundial_alfajores_fixed_v1';
     const initial = {
       phase: 'registro',
-      targetCount: 12,
-      participants: [], // {id,nombre,marca,color}
-      evaluators: [],   // {id,nombre}
-      groups: [],       // [{name:'A', teamIds:[..], scores:{ teamId: { evaluatorId: number } }}]
-      semis: [],        // [{id, homeId, awayId, ratings:{home:{},away:{}}, winnerId?}]
-      finalMatch: null, // {..}
+      participants: FIXED_BRANDS, // fijo
+      evaluators: [],            // {id,nombre}
+      groups: [],               // [{name:'A', teamIds:[..], scores:{ teamId: { evaluatorId: number } }}]
+      semis: [],                // [{id,homeId,awayId,winnerId?}]
+      finalMatch: null,         // {id,homeId,awayId,winnerId?}
       championId: null,
     };
 
     let state = load() || initial;
 
     function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
-    function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
+    function load(){ try { const s = JSON.parse(localStorage.getItem(KEY)); if(!s) return null; // asegurar lista fija
+      s.participants = FIXED_BRANDS; return s; } catch { return null; } }
     function uid(){ return Math.random().toString(36).slice(2,10); }
-    function pastel(){ const h=[140,160,180,200,220,260,300,20,40][Math.floor(Math.random()*9)]; const s=65, l=78; return `hsl(${h} ${s}% ${l}%)`; }
+    function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
+    function pastel(){ const hues=[140,160,180,200,220,260,300,20,40]; const h=hues[Math.floor(Math.random()*hues.length)]; return `hsl(${h} 65% 78%)`; }
 
-    // ==========================
-    // Helpers numéricos
-    // ==========================
-    const defined = x => x!==undefined && x!==null;
-    const clampScore = v => !defined(v) ? undefined : Math.max(1, Math.min(10, Math.floor(Number(v))));
+    // =============== Helpers numéricos ===============
+    const defined = x => x!==undefined && x!==null && x!=='';
+    const clampScore = v => !defined(v) ? undefined : Math.max(1, Math.min(10, Number(v)));
     const avg = arr => !arr.length ? NaN : arr.reduce((a,b)=>a+b,0)/arr.length;
     const median = arr => { if(!arr.length) return NaN; const a=[...arr].sort((x,y)=>x-y); const m=Math.floor(a.length/2); return a.length%2?a[m]:(a[m-1]+a[m])/2; }
-    const countTens = arr => arr.filter(v=>v===10).length;
-    const fmt = x => Number.isFinite(x) ? x.toFixed(2) : '—';
+    const countTens = arr => arr.filter(v=>Number(v)===10).length;
+    const fmt = x => Number.isFinite(x) ? Number(x).toFixed(2) : '—';
 
-    // ==========================
-    // DOM refs
-    // ==========================
+    // =============== DOM refs ===============
     const phaseChip = document.getElementById('phaseChip');
-    const brandsList = document.getElementById('brands');
-
-    const targetCountSel = document.getElementById('targetCount');
-    const pNombre = document.getElementById('pNombre');
-    const pMarca = document.getElementById('pMarca');
-    const btnAddP = document.getElementById('btnAddP');
-    const brandWarn = document.getElementById('brandWarn');
     const pList = document.getElementById('pList');
-
     const eNombre = document.getElementById('eNombre');
     const btnAddE = document.getElementById('btnAddE');
     const eList = document.getElementById('eList');
     const evalCount = document.getElementById('evalCount');
-
-    const btnEjemplo = document.getElementById('btnEjemplo');
-    const btnGoGroups = document.getElementById('btnGoGroups');
     const pStatus = document.getElementById('pStatus');
+    const btnGoGroups = document.getElementById('btnGoGroups');
 
     const viewRegistro = document.getElementById('view-registro');
     const viewGrupos = document.getElementById('view-grupos');
@@ -179,71 +171,28 @@
     const viewCampeon = document.getElementById('view-campeon');
 
     const btnReset = document.getElementById('btnReset');
+    const btnExport = document.getElementById('btnExport');
 
-    // ==========================
-    // Init UI
-    // ==========================
+    // =============== Init UI ===============
     function init(){
-      // datalist marcas
-      brandsList.innerHTML = BRAND_SUGGESTIONS.map(b=>`<option value="${b}"></option>`).join('');
-
-      targetCountSel.value = String(state.targetCount);
-      targetCountSel.onchange = () => { state.targetCount = Number(targetCountSel.value); save(); render(); };
-
-      btnAddP.onclick = () => {
-        const nombre = pNombre.value.trim();
-        const marca = pMarca.value.trim();
-        const brandTaken = !!state.participants.find(p => p.marca.toLowerCase() === marca.toLowerCase());
-        brandWarn.style.display = brandTaken ? 'block' : 'none';
-        if (!nombre || !marca || brandTaken || state.participants.length >= state.targetCount) return;
-        state.participants.push({ id: uid(), nombre, marca, color: pastel() });
-        pNombre.value = ''; pMarca.value = ''; save(); render();
-      };
-
-      btnAddE.onclick = () => {
-        const nombre = eNombre.value.trim(); if (!nombre) return;
-        state.evaluators.push({ id: uid(), nombre }); eNombre.value = ''; save(); render();
-      };
-
-      btnEjemplo.onclick = () => {
-        const brands = [...BRAND_SUGGESTIONS];
-        state.participants = Array.from({length: state.targetCount}).map((_,i)=>({
-          id: uid(), nombre: `Participante ${i+1}`, marca: brands[i] || `Marca ${i+1}`, color: pastel()
-        }));
-        save(); render();
-      };
-
-      btnGoGroups.onclick = () => { if(!btnGoGroups.disabled) { makeGroups(); state.phase='grupos'; save(); render(); } };
-
+      btnAddE.onclick = () => { const nombre = eNombre.value.trim(); if(!nombre) return; state.evaluators.push({ id: uid(), nombre }); eNombre.value=''; save(); render(); };
       btnReset.onclick = () => { if(confirm('¿Reiniciar todo?')) { state = JSON.parse(JSON.stringify(initial)); save(); render(); } };
-
+      btnGoGroups.onclick = () => { if(btnGoGroups.disabled) return; makeGroups(); state.phase = 'grupos'; save(); render(); };
+      btnExport.onclick = () => exportCSV();
       render();
     }
 
     function render(){
       phaseChip.textContent = state.phase.charAt(0).toUpperCase()+state.phase.slice(1);
-
-      const brandsUnique = new Set(state.participants.map(p=>p.marca.toLowerCase())).size === state.participants.length;
-      pStatus.textContent = `${state.participants.length}/${state.targetCount} participantes · Evaluadores: ${state.evaluators.length}`;
-      btnGoGroups.disabled = !(state.participants.length === state.targetCount && state.evaluators.length>0 && brandsUnique);
-
-      // listas
-      pList.innerHTML = state.participants.map((p,i)=>`
-        <div class="row" style="justify-content:space-between; border:1px solid #e2e8f0; border-radius:12px; padding:8px 10px; background:#fff;">
-          <div class="row" style="min-width:0;">
-            <span class="tag" style="background:${p.color}"></span>
-            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-              <b>${i+1}. ${p.nombre}</b> <span class="muted">(${p.marca})</span>
-            </div>
-          </div>
-          <button class="btn" onclick="removeP('${p.id}')">Quitar</button>
-        </div>
-      `).join('');
-
+      // participantes fijos
+      pList.innerHTML = state.participants.map((p,i)=>`<div class="card"><img class="thumb" src="${esc(p.photo||'')}" alt="${esc(p.marca)}"/><div><div><b>${i+1}. ${esc(p.marca)}</b></div></div></div>`).join('');
+      // evaluadores
       evalCount.textContent = `${state.evaluators.length} cargados`;
-      eList.innerHTML = state.evaluators.map(e=>`<span class="pill">${e.nombre} <a href="#" onclick="removeE('${e.id}')" style="margin-left:8px; color:#64748b;">×</a></span>`).join(' ');
+      eList.innerHTML = state.evaluators.map(e=>`<span class="pill">${esc(e.nombre)} <a href="#" onclick="removeE('${e.id}')" style="margin-left:8px; color:#64748b;">×</a></span>`).join(' ');
 
-      // views
+      pStatus.textContent = `Evaluadores: ${state.evaluators.length}`;
+      btnGoGroups.disabled = !(state.evaluators.length>0);
+
       show(viewRegistro, state.phase==='registro');
       show(viewGrupos, state.phase==='grupos');
       show(viewSemis, state.phase==='semis');
@@ -255,17 +204,13 @@
       if (state.phase==='final') renderFinal();
       if (state.phase==='campeon') renderChampion();
     }
+    function show(el,on){ el.style.display = on?'grid':'none'; }
 
-    function show(el, on){ el.style.display = on ? 'grid' : 'none'; }
-
-    window.removeP = (id) => { state.participants = state.participants.filter(p=>p.id!==id); save(); render(); }
     window.removeE = (id) => { state.evaluators = state.evaluators.filter(e=>e.id!==id); save(); render(); }
 
-    // ==========================
-    // Fase de grupos
-    // ==========================
+    // =============== Fase de grupos ===============
     function makeGroups(){
-      const size = state.targetCount===12?3:4;
+      const size = 4; // fijo 16
       const shuffled = [...state.participants].sort(()=>Math.random()-0.5);
       const chunks = [shuffled.slice(0,size), shuffled.slice(size,size*2), shuffled.slice(size*2,size*3), shuffled.slice(size*3,size*4)];
       const names = ['A','B','C','D'];
@@ -274,29 +219,22 @@
 
     function computeGroupTable(g){
       const rows = g.teamIds.map(id=>{
-        const vals = Object.values(g.scores[id]||{}).filter(v=>defined(v));
+        const vals = Object.values(g.scores[id]||{}).filter(v=>defined(v)).map(Number);
         return { id, avg: avg(vals), median: median(vals), count: vals.length, tens: countTens(vals) };
       });
-      rows.sort((a,b)=> (b.avg-a.avg) || (b.median-a.median) || (b.tens-a.tens) );
+      rows.sort((a,b)=> (b.avg-a.avg) || (b.median-a.median) || (b.tens-a.tens) || brandById(a.id).localeCompare(brandById(b.id)) );
       return rows;
     }
-
+    function brandById(id){ return (state.participants.find(p=>p.id===id)||{}).marca || ''; }
     function teamById(id){ return state.participants.find(p=>p.id===id); }
 
     function renderGroups(){
       viewGrupos.innerHTML = '';
-      const ready = state.groups.length===4;
-      if (!ready){ viewGrupos.innerHTML = '<div class="panel">Generá los grupos desde Registro.</div>'; return; }
-
       const grid = document.createElement('div'); grid.className='grid grid-2';
       state.groups.forEach(g=>{
         const card = document.createElement('div'); card.className='panel grid';
-        card.innerHTML = `<div class="row" style="justify-content:space-between;">\
-          <b>Grupo ${g.name}</b>\
-          <span class="muted">${g.teamIds.length} alfajores · ${state.evaluators.length} evaluadores</span>\
-        </div>`;
+        card.innerHTML = `<div class="row" style="justify-content:space-between;"><b>Grupo ${g.name}</b><span class="muted">${g.teamIds.length} alfajores · ${state.evaluators.length} evaluadores</span></div>`;
 
-        // tabla de inputs
         const tbl = document.createElement('table');
         const thead = document.createElement('thead');
         thead.innerHTML = `<tr><th>Alfajor</th>${state.evaluators.map(e=>`<th>${esc(e.nombre)}</th>`).join('')}<th>Prom.</th><th>Mediana</th></tr>`;
@@ -304,19 +242,19 @@
         const tbody = document.createElement('tbody');
         g.teamIds.forEach(tid=>{
           const tr = document.createElement('tr');
-          const team = teamById(tid);
-          tr.innerHTML = `<td><span class="tag" style="background:${team.color}"></span> <b>${esc(team.nombre)}</b> <span class="muted">(${esc(team.marca)})</span></td>`;
+          const t = teamById(tid);
+          tr.innerHTML = `<td><img class="thumb" src="${esc(t.photo||'')}" alt="${esc(t.marca)}"/> <b>${esc(t.marca)}</b></td>`;
           state.evaluators.forEach(ev=>{
             const td = document.createElement('td');
             const inp = document.createElement('input');
-            inp.type='number'; inp.min=1; inp.max=10; inp.step=1; inp.style.width='70px';
+            inp.type='number'; inp.min=1; inp.max=10; inp.step=0.1; inp.style.width='80px';
             const v = g.scores[tid]?.[ev.id]; inp.value = defined(v)? v : '';
             inp.oninput = () => { const val = clampScore(inp.value); if(!defined(g.scores[tid])) g.scores[tid]={}; g.scores[tid][ev.id]=val; save(); renderGroups(); };
             td.appendChild(inp); tr.appendChild(td);
           });
           const avgCell = document.createElement('td');
           const medCell = document.createElement('td');
-          const vals = Object.values(g.scores[tid]||{}).filter(v=>defined(v));
+          const vals = Object.values(g.scores[tid]||{}).filter(v=>defined(v)).map(Number);
           avgCell.textContent = fmt(avg(vals)); medCell.textContent = fmt(median(vals));
           tr.appendChild(avgCell); tr.appendChild(medCell);
           tbody.appendChild(tr);
@@ -324,7 +262,6 @@
         tbl.appendChild(tbody);
         card.appendChild(tbl);
 
-        // tabla de posiciones
         const rows = computeGroupTable(g);
         const table2 = document.createElement('table');
         table2.innerHTML = `<thead><tr><th>Equipo</th><th>Prom.</th><th>Mediana</th><th>#Votos</th><th>#10s</th></tr></thead>`;
@@ -332,23 +269,20 @@
         rows.forEach(r=>{
           const t = teamById(r.id);
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td><span class="tag" style="background:${t.color}"></span> ${esc(t.nombre)} <span class="muted">(${esc(t.marca)})</span></td><td><b>${fmt(r.avg)}</b></td><td>${fmt(r.median)}</td><td>${r.count}</td><td>${r.tens}</td>`;
+          tr.innerHTML = `<td><img class="thumb" src="${esc(t.photo||'')}" alt="${esc(t.marca)}"/> ${esc(t.marca)}</td><td><b>${fmt(r.avg)}</b></td><td>${fmt(r.median)}</td><td>${r.count}</td><td>${r.tens}</td>`;
           tb2.appendChild(tr);
         });
         table2.appendChild(tb2);
         const winner = rows[0] ? teamById(rows[0].id) : null;
         const winDiv = document.createElement('div'); winDiv.className='muted'; winDiv.style.marginTop='6px';
-        winDiv.innerHTML = `Avanza: <b>${winner? esc(winner.nombre): '—'}</b>`;
-
+        winDiv.innerHTML = `Avanza: <b>${winner? esc(winner.marca): '—'}</b>`;
         card.appendChild(document.createElement('hr'));
         card.appendChild(table2);
         card.appendChild(winDiv);
         grid.appendChild(card);
       });
-
       viewGrupos.appendChild(grid);
 
-      // botón avanzar
       const allHaveAny = state.groups.every(g=> g.teamIds.every(id=> Object.values(g.scores[id]||{}).some(v=>defined(v)) ));
       const footer = document.createElement('div'); footer.className='row'; footer.style.justifyContent='flex-end';
       const next = document.createElement('button'); next.className='btn primary'; next.textContent='Avanzar a Semifinales'; next.disabled = !allHaveAny;
@@ -356,18 +290,15 @@
       footer.appendChild(next); viewGrupos.appendChild(footer);
     }
 
-    // ==========================
-    // Semifinales / Final (ratings por evaluador)
-    // ==========================
+    // =============== Semifinales / Final (elección directa) ===============
     function pickGroupWinner(g){ return computeGroupTable(g)[0]?.id; }
-
     function makeSemis(){
       const map = Object.fromEntries(state.groups.map(g=>[g.name,g]));
       const A = pickGroupWinner(map['A']);
       const B = pickGroupWinner(map['B']);
       const C = pickGroupWinner(map['C']);
       const D = pickGroupWinner(map['D']);
-      state.semis = [ { id: uid(), homeId:A, awayId:D, ratings:{home:{},away:{}} }, { id: uid(), homeId:B, awayId:C, ratings:{home:{},away:{}} } ];
+      state.semis = [ { id: uid(), homeId:A, awayId:D, winnerId:null }, { id: uid(), homeId:B, awayId:C, winnerId:null } ];
     }
 
     function renderSemis(){
@@ -377,99 +308,88 @@
         const card = document.createElement('div'); card.className='panel';
         const h = teamById(m.homeId), a = teamById(m.awayId);
         card.innerHTML = `<div class="muted" style="margin-bottom:6px;">Semifinal ${i+1}</div>`;
-        card.appendChild(koRatingsTable(m));
+        const row = document.createElement('div'); row.className='grid grid-2';
+        [h,a].forEach(t=>{
+          const b = document.createElement('button'); b.className='btn'; b.style.display='flex'; b.style.alignItems='center'; b.style.gap='8px'; b.style.padding='10px 12px'; b.style.textAlign='left'; b.style.borderRadius='12px'; b.style.border='1px solid #cbd5e1';
+          if (m.winnerId===t.id){ b.style.background='#ecfdf5'; b.style.borderColor='#10b981'; }
+          const img = document.createElement('img'); img.className='thumb-lg'; img.src=t.photo||''; img.alt=t.marca;
+          const span = document.createElement('span'); span.textContent = t.marca; span.style.fontWeight='600';
+          b.appendChild(img); b.appendChild(span);
+          b.onclick = ()=>{ m.winnerId = t.id; save(); renderSemis(); };
+          row.appendChild(b);
+        });
+        card.appendChild(row);
+        if (m.winnerId){ const choose = document.createElement('div'); choose.className='ok'; choose.style.marginTop='6px'; choose.innerHTML = `Elegido: <b>${esc(teamById(m.winnerId).marca)}</b>`; card.appendChild(choose); }
         grid.appendChild(card);
       });
       viewSemis.appendChild(grid);
 
-      const ready = state.semis.every(isKoResolved);
-      const footer = document.createElement('div'); footer.className='row'; footer.style.justifyContent='flex-end';
-      const next = document.createElement('button'); next.className='btn primary'; next.textContent='Armar Final'; next.disabled = !ready;
-      next.onclick = () => { if(!next.disabled){ const w = state.semis.map(pickKoWinner); state.finalMatch = { id: uid(), homeId:w[0], awayId:w[1], ratings:{home:{},away:{}} }; state.phase='final'; save(); render(); } };
-      footer.appendChild(next); viewSemis.appendChild(footer);
-    }
-
-    function koRatingsTable(match){
-      const wrap = document.createElement('div');
-      const h = teamById(match.homeId), a = teamById(match.awayId);
-      const tbl = document.createElement('table');
-      const thead = document.createElement('thead');
-      thead.innerHTML = `<tr><th>Evaluador</th><th>${esc(h.nombre)} (${esc(h.marca)})</th><th>${esc(a.nombre)} (${esc(a.marca)})</th></tr>`; tbl.appendChild(thead);
-      const tb = document.createElement('tbody');
-      state.evaluators.forEach(ev=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${esc(ev.nombre)}</td>`;
-        const ih = document.createElement('input'); ih.type='number'; ih.min=1; ih.max=10; ih.step=1; ih.style.width='70px'; ih.value = defined(match.ratings.home[ev.id])? match.ratings.home[ev.id]: '';
-        ih.oninput = ()=>{ match.ratings.home[ev.id] = clampScore(ih.value); save(); renderSemis(); };
-        const ia = document.createElement('input'); ia.type='number'; ia.min=1; ia.max=10; ia.step=1; ia.style.width='70px'; ia.value = defined(match.ratings.away[ev.id])? match.ratings.away[ev.id]: '';
-        ia.oninput = ()=>{ match.ratings.away[ev.id] = clampScore(ia.value); save(); renderSemis(); };
-        const tdh=document.createElement('td'); tdh.appendChild(ih); const tda=document.createElement('td'); tda.appendChild(ia);
-        tr.appendChild(tdh); tr.appendChild(tda); tb.appendChild(tr);
-      });
-      tbl.appendChild(tb);
-
-      const ah = avg(Object.values(match.ratings.home).filter(v=>defined(v)));
-      const aw = avg(Object.values(match.ratings.away).filter(v=>defined(v)));
-      const tied = Number.isFinite(ah) && Number.isFinite(aw) && Math.abs(ah-aw)<1e-9;
-
-      const info = document.createElement('div'); info.className='muted'; info.style.marginTop='6px';
-      info.innerHTML = `Promedios → ${esc(h.nombre)}: <b>${fmt(ah)}</b> · ${esc(a.nombre)}: <b>${fmt(aw)}</b>`;
-
-      wrap.appendChild(tbl); wrap.appendChild(info);
-
-      if (tied){
-        const box = document.createElement('div'); box.className='panel'; box.style.marginTop='8px';
-        box.innerHTML = `<div class='row' style='justify-content:space-between;'>Empate en promedio. Elegí ganador manual.</div>`;
-        const row = document.createElement('div'); row.className='row'; row.style.marginTop='6px';
-        const b1 = document.createElement('button'); b1.className='btn'; b1.textContent = 'Gana '+h.nombre; b1.onclick=()=>{ match.winnerId = h.id; save(); renderSemis(); };
-        const b2 = document.createElement('button'); b2.className='btn'; b2.textContent = 'Gana '+a.nombre; b2.onclick=()=>{ match.winnerId = a.id; save(); renderSemis(); };
-        row.appendChild(b1); row.appendChild(b2); box.appendChild(row); wrap.appendChild(box);
-      }
-
-      return wrap;
-    }
-
-    function isKoResolved(m){
-      const ah = avg(Object.values(m.ratings.home).filter(v=>defined(v)));
-      const aw = avg(Object.values(m.ratings.away).filter(v=>defined(v)));
-      if (!Number.isFinite(ah) || !Number.isFinite(aw)) return false;
-      if (Math.abs(ah-aw) > 1e-9) return true; return !!m.winnerId;
-    }
-    function pickKoWinner(m){
-      const ah = avg(Object.values(m.ratings.home).filter(v=>defined(v)));
-      const aw = avg(Object.values(m.ratings.away).filter(v=>defined(v)));
-      if (!Number.isFinite(ah) || !Number.isFinite(aw)) return null;
-      if (ah>aw) return m.homeId; if (aw>ah) return m.awayId; return m.winnerId || null;
+      const ready = state.semis.every(m=>!!m.winnerId);
+      const foot = document.createElement('div'); foot.className='row'; foot.style.justifyContent='flex-end';
+      const next = document.createElement('button'); next.className='btn primary'; next.textContent='Armar Final'; next.disabled=!ready;
+      next.onclick = ()=>{ if(!next.disabled){ const w = state.semis.map(m=>m.winnerId); state.finalMatch = { id: uid(), homeId:w[0], awayId:w[1], winnerId:null }; state.phase='final'; save(); render(); } };
+      foot.appendChild(next); viewSemis.appendChild(foot);
     }
 
     function renderFinal(){
       viewFinal.innerHTML = '';
       const m = state.finalMatch; if (!m){ viewFinal.innerHTML = '<div class="panel">No hay final aún.</div>'; return; }
       const card = document.createElement('div'); card.className='panel';
-      card.appendChild(koRatingsTable(m));
-      const ready = isKoResolved(m); const btn = document.createElement('button'); btn.className='btn primary'; btn.textContent='Coronar Campeón'; btn.disabled=!ready;
-      btn.onclick = ()=> { const win = pickKoWinner(m); if(win){ state.championId = win; state.phase='campeon'; save(); render(); } };
-      const foot = document.createElement('div'); foot.className='row'; foot.style.justifyContent='flex-end'; foot.appendChild(btn);
-      viewFinal.appendChild(card); viewFinal.appendChild(foot);
+      const wrap = document.createElement('div'); wrap.className='grid grid-2';
+      [teamById(m.homeId), teamById(m.awayId)].forEach(t=>{
+        const b = document.createElement('button'); b.className='btn'; b.style.display='flex'; b.style.alignItems='center'; b.style.gap='8px'; b.style.padding='12px'; b.style.textAlign='left'; b.style.borderRadius='12px'; b.style.border='1px solid #cbd5e1';
+        if (m.winnerId===t.id){ b.style.background='#ecfdf5'; b.style.borderColor='#10b981'; }
+        const img = document.createElement('img'); img.className='thumb-lg'; img.src=t.photo||''; img.alt=t.marca;
+        const span = document.createElement('span'); span.textContent = t.marca; span.style.fontWeight='700';
+        b.appendChild(img); b.appendChild(span);
+        b.onclick = ()=>{ m.winnerId = t.id; save(); renderFinal(); };
+        wrap.appendChild(b);
+      });
+      card.appendChild(wrap);
+      if (m.winnerId){ const choose = document.createElement('div'); choose.className='ok'; choose.style.marginTop='6px'; choose.innerHTML = `Elegido: <b>${esc(teamById(m.winnerId).marca)}</b>`; card.appendChild(choose); }
+      const foot = document.createElement('div'); foot.className='row'; foot.style.justifyContent='flex-end'; foot.style.marginTop='8px';
+      const btn = document.createElement('button'); btn.className='btn primary'; btn.textContent='Coronar Campeón'; btn.disabled=!m.winnerId;
+      btn.onclick = ()=>{ if(m.winnerId){ state.championId = m.winnerId; state.phase='campeon'; save(); render(); } };
+      foot.appendChild(btn); card.appendChild(foot);
+      viewFinal.appendChild(card);
     }
 
     function renderChampion(){
-      const champ = state.participants.find(p=>p.id===state.championId);
-      viewCampeon.innerHTML = `<div class='panel' style='text-align:center;'>\
-        <div class='ok' style='text-transform:uppercase; letter-spacing:.06em;'>¡Campeón del Mundial de Alfajores!</div>\
-        <div style='font-size:28px; font-weight:800; margin-top:8px;'>🥇 ${champ? esc(champ.nombre):'—'} <span class='muted'>(${champ? esc(champ.marca):''})</span></div>\
-        <div style='margin-top:16px;'><button class='btn' onclick="resetTournament()">Empezar un nuevo torneo</button></div>\
+      const champ = teamById(state.championId);
+      viewCampeon.innerHTML = `<div class='panel' style='text-align:center;'>
+        <div class='ok' style='text-transform:uppercase; letter-spacing:.06em;'>¡Campeón del Mundial de Alfajores!</div>
+        <div style='font-size:28px; font-weight:800; margin-top:8px;'>🥇 ${champ? esc(champ.marca):'—'}</div>
+        <div style='margin-top:10px;'>${champ? `<img src='${esc(champ.photo||'')}' alt='${esc(champ.marca)}' style='width:160px;height:160px;object-fit:cover;border-radius:14px;border:1px solid #e2e8f0;'/>` : ''}</div>
+        <div style='margin-top:16px;'><button class='btn' onclick="resetTournament()">Empezar un nuevo torneo</button></div>
       </div>`;
     }
 
     window.resetTournament = function(){ if (confirm('¿Reiniciar todo el torneo?')) { state = JSON.parse(JSON.stringify(initial)); save(); render(); } }
 
-    // ==========================
-    // Utils
-    // ==========================
-    function esc(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+    // =============== Export CSV ===============
+    function exportCSV(){
+      const lines = [];
+      const quote = s => '"' + String(s).replace(/"/g,'""') + '"';
+      lines.push(['Seccion','Grupo','Marca','Promedio','Mediana','Votos','Dieces'].map(quote).join(','));
+      (state.groups||[]).forEach(g => {
+        const rows = computeGroupTable(g);
+        rows.forEach(r => {
+          lines.push(['Grupos', g.name, brandById(r.id), fmt(r.avg), fmt(r.median), r.count, r.tens].map(quote).join(','));
+        });
+      });
+      if (state.semis?.length){
+        state.semis.forEach((m,i)=>{ lines.push(['Semifinal', i+1, brandById(m.winnerId||''), '', '', '', ''].map(quote).join(',')); });
+      }
+      if (state.finalMatch){ lines.push(['Final', '', brandById(state.finalMatch.winnerId||''), '', '', '', ''].map(quote).join(',')); }
+      if (state.championId){ lines.push(['Campeon', '', brandById(state.championId||''), '', '', '', ''].map(quote).join(',')); }
+      const blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='mundial-alfajores.csv'; a.click(); URL.revokeObjectURL(url);
+    }
 
-    // Start
+    // =============== Utils ===============
+    function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+    // start
     init();
   </script>
 </body>
