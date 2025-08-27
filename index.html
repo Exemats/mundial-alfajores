@@ -46,7 +46,6 @@
   </header>
 
   <main class="wrap" style="padding-bottom:60px;">
-    <!-- Registro (participantes fijos + evaluadores) -->
     <section id="view-registro" class="grid" style="margin-top:12px;">
       <div class="panel grid">
         <div class="row" style="justify-content:space-between;">
@@ -83,16 +82,12 @@
       </div>
     </section>
 
-    <!-- Grupos -->
     <section id="view-grupos" class="grid" style="display:none; margin-top:12px;"></section>
 
-    <!-- Semis -->
     <section id="view-semis" class="grid" style="display:none; margin-top:12px;"></section>
 
-    <!-- Final -->
     <section id="view-final" class="grid" style="display:none; margin-top:12px;"></section>
 
-    <!-- Campeón -->
     <section id="view-campeon" class="grid" style="display:none; margin-top:12px;"></section>
 
     <div class="footer">
@@ -121,7 +116,8 @@
       { marca: "Fulbito", photo: "https://http2.mlstatic.com/D_NQ_NP_895461-MLA76008036712_052024-O.webp" },
       { marca: "Jorgito", photo: "https://www.cucinare.tv/wp-content/uploads/2020/07/Jorgito.jpg" },
       { marca: "Terrabusi triple", photo: "https://www.farmaciassanchezantoniolli.com.ar/13210-medium_default/terrabusi-alfajor-triple-cl%C3%A1sico-x-70g.jpg" },
-      { marca: "Bon o Bon", photo: "https://arcorencasa.com/wp-content/uploads/2024/10/20241008-4303.webp" },
+      /* CORRECCIÓN 1: URL de Bon o Bon corregida */
+      { marca: "Bon o Bon", photo: "https://dulcistore.com.ar/wp-content/uploads/2020/07/alfajor-bon-o-bon-simple-negro.jpg" },
       { marca: "B&N Bagley", photo: "https://statics.dinoonline.com.ar/imagenes/full_600x600_ma/2182006_f.jpg" },
     ].map((x)=>({ id: slug(x.marca), ...x, color: pastel() }));
 
@@ -130,7 +126,7 @@
     const initial = {
       phase: 'registro',
       participants: FIXED_BRANDS, // fijo
-      evaluators: [],            // {id,nombre}
+      evaluators: [],           // {id,nombre}
       groups: [],               // [{name:'A', teamIds:[..], scores:{ teamId: { evaluatorId: number } }}]
       semis: [],                // [{id,homeId,awayId,winnerId?}]
       finalMatch: null,         // {id,homeId,awayId,winnerId?}
@@ -368,15 +364,15 @@
       if (m.winnerId){ const choose = document.createElement('div'); choose.className='ok'; choose.style.marginTop='6px'; choose.innerHTML = `Elegido: <b>${esc(teamById(m.winnerId).marca)}</b>`; card.appendChild(choose); }
       const foot = document.createElement('div'); foot.className='row'; foot.style.justifyContent='flex-end'; foot.style.marginTop='8px';
       const btn = document.createElement('button'); btn.className='btn primary'; btn.textContent='Coronar Campeón'; btn.disabled=!m.winnerId;
-      btn.onclick = ()=>{ 
-        if(m.winnerId){ 
-          state.championId = m.winnerId; 
-          state.phase='campeon'; 
-          save(); 
-          render(); 
+      btn.onclick = ()=>{
+        if(m.winnerId){
+          state.championId = m.winnerId;
+          state.phase='campeon';
+          save();
+          render();
           // 🎆 Celebración al definir campeón
           setTimeout(celebrate, 50);
-        } 
+        }
       };
       foot.appendChild(btn); card.appendChild(foot);
       viewFinal.appendChild(card);
@@ -415,7 +411,8 @@
     }
 
     // =============== Utils ===============
-    function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#39;"}[c])); }
+    /* CORRECCIÓN 2: Error de sintaxis en el objeto de reemplazo */
+    function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
     // 🎉 Efecto de fuegos artificiales / confeti (sin librerías)
     function celebrate(){
