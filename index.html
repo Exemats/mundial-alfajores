@@ -196,13 +196,38 @@
 
     window.removeE = (id) => { state.evaluators = state.evaluators.filter(e=>e.id!==id); save(); render(); }
 
-    function makeGroups(){
-      const size = 4;
-      const shuffled = [...state.participants].sort(()=>Math.random()-0.5);
-      const chunks = [shuffled.slice(0,size), shuffled.slice(size,size*2), shuffled.slice(size*2,size*3), shuffled.slice(size*3,size*4)];
+    function makeGroups() {
+      const groupCount = 4;
+      const shuffled = [...state.participants].sort(() => Math.random() - 0.5);
+    
+      const base = Math.floor(shuffled.length / groupCount);   // p.ej., 17 -> 4
+      const remainder = shuffled.length % groupCount;          // p.ej., 17 -> 1
+    
       const names = ['A','B','C','D'];
-      state.groups = chunks.map((chunk,i)=>({ name:names[i], teamIds: chunk.map(t=>t.id), scores: Object.fromEntries(chunk.map(t=>[t.id,{}])) }));
+    
+      // Elegimos al azar qué grupos reciben +1 (con 17 será solo uno)
+      const indices = [...Array(groupCount).keys()]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, remainder);
+    
+      const sizes = Array.from({ length: groupCount }, (_, i) =>
+        base + (indices.includes(i) ? 1 : 0)
+      );
+    
+      const chunks = [];
+      let idx = 0;
+      for (const size of sizes) {
+        chunks.push(shuffled.slice(idx, idx + size));
+        idx += size;
+      }
+    
+      state.groups = chunks.map((chunk, i) => ({
+        name: names[i],
+        teamIds: chunk.map(t => t.id),
+        scores: Object.fromEntries(chunk.map(t => [t.id, {}]))
+      }));
     }
+
 
     function computeGroupTable(g){
       const rows = g.teamIds.map(id=>{
